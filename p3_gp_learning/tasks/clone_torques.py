@@ -129,11 +129,21 @@ def run_closed_loop(model: MultitaskGPRegressor, k_var: float, name: str):
         jit_compile=False,
     )
 
-    error = np.linalg.norm(np.array(sim_ts["x_ts"]) - np.array(traj_ts["x_ts"]), axis=1)
-    print(f"{name}: largest path error {error.max():.3f} m, last error {error[-1]:.3f} m")
-
+    report_path_error(traj_ts, sim_ts, name)
     plot_path(traj_ts, sim_ts, name, OUTPUT_DIR / f"3f_path_{name}.pdf")
     return sim_ts
+
+
+def report_path_error(traj_ts, sim_ts, name: str) -> float:
+    """Print the tip error and give the RMSE.
+
+    The largest error holds the start transient, so the RMSE gives the better picture of
+    the tracking.
+    """
+    error = np.linalg.norm(np.array(sim_ts["x_ts"]) - np.array(traj_ts["x_ts"]), axis=1)
+    rmse = float(np.sqrt(np.mean(error**2)))
+    print(f"{name}: RMSE {rmse:.3f} m, largest error {error.max():.3f} m")
+    return rmse
 
 
 def plot_path(traj_ts, sim_ts, name, filepath):

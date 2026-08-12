@@ -56,6 +56,19 @@ python -m p1_vision_state_estimation.run --epochs 2 --runs 1
 Every task module has an `argparse` interface. Use `--help`. The long jobs
 (`collect_dataset`, `train_lnn`, `q_ilc`) have flags that make them shorter.
 
+### Long jobs in the background
+
+`train_lnn` needs approximately one hour, and the full project 1 run needs approximately
+40 minutes. Start such a job with `setsid`, or the agent harness stops it when it cleans
+up the process group of the tool call:
+
+```bash
+setsid nohup bash -c "python3 -m p2_control.tasks.train_lnn > train.log 2>&1" \
+    < /dev/null > /dev/null 2>&1 &
+```
+
+The progress bar writes `\r`, so read the log with `tr '\r' '\n' < train.log | tail`.
+
 ## Rules for the code
 
 - Set the JAX flags in `p2_control/__init__.py` before you make an array. The ILC tasks

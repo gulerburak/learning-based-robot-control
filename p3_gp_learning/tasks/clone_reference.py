@@ -37,7 +37,7 @@ from p2_control.controllers import ctrl_ff_gravity_compensation
 from p3_gp_learning.cloning import make_reference_cloning_controller
 from p3_gp_learning.data_utils import OUTPUT_DIR, wrap_angle
 from p3_gp_learning.gp_models import periodic_kernel
-from p3_gp_learning.tasks.clone_torques import plot_path
+from p3_gp_learning.tasks.clone_torques import plot_path, report_path_error
 from p3_gp_learning.wrappers import MultitaskGPRegressor
 
 DATASET_DT = 1e-2
@@ -98,9 +98,7 @@ def run_closed_loop(model, name: str, kp: float, kd: float, k_var: float, with_f
         **kwargs,
     )
 
-    error = np.linalg.norm(np.array(sim_ts["x_ts"]) - np.array(traj_ts["x_ts"]), axis=1)
-    print(f"{name}: largest path error {error.max():.3f} m, last error {error[-1]:.3f} m")
-
+    report_path_error(traj_ts, sim_ts, name)
     plot_path(traj_ts, sim_ts, name, OUTPUT_DIR / f"3g_path_{name}.pdf")
     return sim_ts
 
