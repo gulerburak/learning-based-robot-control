@@ -132,10 +132,11 @@ python -m p2_control.tasks.q_ilc             # approximately 10 minutes
 All scripts have an `argparse` interface. Use `--help`. The figures go into `outputs/`.
 
 ```bash
+pip install -e ".[dev]"
 python -m pytest tests/test_lnn.py
 ```
 
-The test checks the Lagrangian Neural Network against reference values.
+The test checks the Lagrangian Neural Network against reference values of the course.
 
 ---
 

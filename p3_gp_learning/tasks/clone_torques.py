@@ -132,11 +132,11 @@ def run_closed_loop(model: MultitaskGPRegressor, k_var: float, name: str):
     error = np.linalg.norm(np.array(sim_ts["x_ts"]) - np.array(traj_ts["x_ts"]), axis=1)
     print(f"{name}: largest path error {error.max():.3f} m, last error {error[-1]:.3f} m")
 
-    _plot_path(traj_ts, sim_ts, name, OUTPUT_DIR / f"3f_path_{name}.pdf")
+    plot_path(traj_ts, sim_ts, name, OUTPUT_DIR / f"3f_path_{name}.pdf")
     return sim_ts
 
 
-def _plot_path(traj_ts, sim_ts, name, filepath):
+def plot_path(traj_ts, sim_ts, name, filepath):
     fig, ax = plt.subplots(figsize=(5.5, 5.5))
     ax.plot(traj_ts["x_ts"][:, 0], traj_ts["x_ts"][:, 1], "k--", label="reference")
     ax.plot(sim_ts["x_ts"][:, 0], sim_ts["x_ts"][:, 1], label="robot")

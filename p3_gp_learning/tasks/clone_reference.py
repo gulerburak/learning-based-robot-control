@@ -9,10 +9,12 @@ The change points along the path. A proportional gain makes a torque from it.
 
 The script runs two closed loops:
 
-  1. The pure cloned policy. The robot leaves the path. There is no speed term, so a
-     disturbance makes an oscillation that does not stop.
-  2. The same policy plus a damping term and a term that moves the robot away from
-     uncertainty. The robot follows the path.
+  1. The pure cloned policy. The robot leaves the path. There is no speed term and no
+     gravity compensation.
+  2. The same policy plus gravity compensation, a damping term, and a term that moves the
+     robot away from uncertainty. The error becomes smaller, but this controller stays
+     much weaker than the controller of `clone_torques`. The change of the angle over one
+     time step is a small signal against the gravity torque of the arm.
 
     python -m p3_gp_learning.tasks.clone_reference
 """
@@ -35,7 +37,7 @@ from p2_control.controllers import ctrl_ff_gravity_compensation
 from p3_gp_learning.cloning import make_reference_cloning_controller
 from p3_gp_learning.data_utils import OUTPUT_DIR, wrap_angle
 from p3_gp_learning.gp_models import periodic_kernel
-from p3_gp_learning.tasks.clone_torques import _plot_path
+from p3_gp_learning.tasks.clone_torques import plot_path
 from p3_gp_learning.wrappers import MultitaskGPRegressor
 
 DATASET_DT = 1e-2
@@ -99,7 +101,7 @@ def run_closed_loop(model, name: str, kp: float, kd: float, k_var: float, with_f
     error = np.linalg.norm(np.array(sim_ts["x_ts"]) - np.array(traj_ts["x_ts"]), axis=1)
     print(f"{name}: largest path error {error.max():.3f} m, last error {error[-1]:.3f} m")
 
-    _plot_path(traj_ts, sim_ts, name, OUTPUT_DIR / f"3g_path_{name}.pdf")
+    plot_path(traj_ts, sim_ts, name, OUTPUT_DIR / f"3g_path_{name}.pdf")
     return sim_ts
 
 

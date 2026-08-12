@@ -49,10 +49,7 @@ def evaluate_model(
         loss_sum += LOSS_FN(outputs, target).item()
 
         angle_hat = _predict_angle(outputs, model_type)
-        angle = theta.squeeze(-1) if model_type == "theta" else torch.atan2(
-            trig[:, 0], trig[:, 1]
-        )
-        error_sum += ERROR_FN(angle_hat, angle).item()
+        error_sum += ERROR_FN(angle_hat, theta.squeeze(-1)).item()
 
     return loss_sum / len(loader), error_sum / len(loader)
 
