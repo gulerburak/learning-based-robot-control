@@ -1,0 +1,22 @@
+# Results of a run
+outputs/
+
+# Data that the scripts make
+data/p2/
+data/p3/
+data/pendulum_images/
+data/*.gif
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+build/
+dist/
+.venv/
+venv/
+
+# Editors and systems
+.idea/
+.vscode/
+.DS_Store

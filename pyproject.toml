@@ -1,0 +1,50 @@
+[build-system]
+requires = ["setuptools"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "learning-based-robot-control"
+version = "1.0.0"
+description = "State estimation, model-based control and learning-based control for a 2-link robot"
+readme = "README.md"
+requires-python = ">=3.10,<3.14"
+license = { text = "MIT" }
+
+# The versions are pinned. JAX and Flax change their API often, and the results of the
+# ILC tasks need 64-bit floats and a stable `expm`.
+dependencies = [
+    "chex==0.1.86",
+    "dill",
+    "flax==0.8.2",
+    "gpytorch",
+    "imageio",
+    "jax==0.4.25",
+    "jaxlib==0.4.25",
+    "jaxtyping==0.2.28",
+    "matplotlib",
+    "numpy==1.26.4",
+    "optax==0.2.1",
+    "pandas",
+    "scipy",
+    "seaborn",
+    "torch",
+    "torchvision",
+    "tqdm",
+]
+
+[project.optional-dependencies]
+# `gymnasium` renders the pendulum images of project 1. It is not needed if you already
+# have the images.
+render = ["gymnasium[classic_control]"]
+dev = ["black", "pytest"]
+
+[tool.setuptools.packages.find]
+include = [
+    "jax_double_pendulum*",
+    "p1_vision_state_estimation*",
+    "p2_control*",
+    "p3_gp_learning*",
+]
+
+[tool.black]
+line-length = 88
