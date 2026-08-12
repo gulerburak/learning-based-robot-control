@@ -196,6 +196,12 @@ not read one run as proof of which mean function is safer.
 simulations, 60 epochs) gives a validation loss of 1.4e-02 and a rollout error of 3.76 m.
 That shows the pipeline, not the result.
 
-**Task 3g.** The original notebook recorded no error value for this task. A run of this
-repo gives a largest path error of 4.62 m for the cloned policy alone, and 3.30 m with the
-damping term and the variance term.
+**Tasks 3f and 3g.** The original notebooks recorded no error value for these tasks, so
+there is nothing to compare. A run of this repo gives:
+
+| Task | Controller | RMSE of the tip | Largest error |
+|---|---|---|---|
+| 3f | the cloned policy alone | 0.996 m | 2.08 m |
+| 3f | plus the variance term, k_var = 2.0 | 0.157 m | 0.40 m |
+| 3g | the cloned policy alone | see the log | 4.62 m |
+| 3g | plus damping and the variance term | see the log | 3.30 m |

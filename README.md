@@ -21,7 +21,7 @@ Simplified Technical English.
 | **1. Vision** | The output representation of an angle changes the accuracy more than the network size. | **0.071 rad** with sine and cosine, against **0.530 rad** with the angle. The models differ by 31 parameters. |
 | **2. Control** | A Lagrangian Neural Network learns the dynamics well enough to replace the physical model in the controller. | **0.049 m** tip error with the learned model, against 0.049 m with the true model. |
 | **2. ILC** | Iterative Learning Control removes the effect of a model error of 80 %. | **0.034 m** tip error, which is better than a PD controller with the correct model. |
-| **3. GP** | The variance of a Gaussian process makes an unstable cloned controller stable. | **0.40 m** largest path error, against 2.08 m without the variance term. |
+| **3. GP** | The variance of a Gaussian process makes an unstable cloned controller stable. | **0.157 m** path RMSE, against 0.996 m without the variance term. |
 
 ---
 
@@ -85,8 +85,10 @@ training path and large away from it. A torque along the negative gradient of th
 
     tau_repel = -k_var * sigma * sign(d(sigma^2) / d(theta))
 
-moves the robot back to the path. The largest path error falls from 2.08 m to 0.40 m. The
-controller gets a feedback to the path, although it never knows the desired position.
+moves the robot back to the path. The path RMSE falls from 0.996 m to 0.157 m. Without
+the term the robot leaves the ellipse and swings out to y = −3 m. With the term it stays
+on the ellipse. The controller gets a feedback to the path, although it never knows the
+desired position.
 
 A second experiment clones the path itself, without a teacher controller. There the same
 idea helps (4.62 m to 3.30 m), but the controller stays weak. The

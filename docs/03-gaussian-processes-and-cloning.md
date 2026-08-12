@@ -129,10 +129,14 @@ variance:
 
 The gradient comes from automatic differentiation through the GP.
 
-| Controller | Largest error of the tip |
-|---|---|
-| The cloned policy alone | 2.08 m — it leaves the path |
-| The same policy plus the variance term (k_var = 2.0) | **0.40 m** — it stays near the path |
+| Controller | RMSE of the tip | Largest error |
+|---|---|---|
+| The cloned policy alone | 0.996 m | 2.08 m |
+| The same policy plus the variance term (k_var = 2.0) | **0.157 m** | 0.40 m |
+
+The figures `outputs/p3/3f_path_*.pdf` show it clearly. The cloned policy leaves the
+ellipse and swings out to y = −3 m. With the variance term the robot stays on the
+ellipse.
 
 The controller now has a feedback to the path, although it never knows the desired
 position. The uncertainty of the model does the work.
