@@ -6,6 +6,11 @@ are here, because a portfolio repo must not hold answer keys inside the code.
 The text below keeps the technical content of the original answers. The wording follows
 ASD-STE100 Simplified Technical English.
 
+The numbers in the answers of project 1 come from the original run. The port measures the
+angle error with the wrap of the full circle, so it gives 0.5075 rad and 0.0126 rad. The
+reasoning does not change: the sine-cosine model is much more accurate. See
+[results.md](results.md).
+
 ---
 
 ## Project 1 — vision-based state estimation
@@ -26,8 +31,9 @@ cannot find overfit. A model can learn the training set and still fail on new da
 
 The loss of `M_trig` starts near 0.50 and decreases to approximately 0.0003. The loss of
 `M_theta` starts near 10 and decreases to approximately 0.35. The models have different
-output ranges. The angle is in [−π, π], so the largest squared error is (2π)² ≈ 39.5. The
-sine and the cosine are in [−1, 1], so the largest squared error is 4 for each output.
+output ranges. The angle covers a full circle, so the largest squared error is
+(2π)² ≈ 39.5. The sine and the cosine are in [−1, 1], so the largest squared error is 4
+for each output.
 
 **Why is the indirect prediction more accurate?**
 

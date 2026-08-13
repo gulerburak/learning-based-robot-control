@@ -57,6 +57,11 @@ Bold cells hold the student code.
    notebook makes `val_loader` but never uses it. The port adds the check.
 4. **Addition.** The port makes a loss-curve figure and an error-against-angle figure. The
    notebook printed the loss only.
+5. **Measure fix.** The labels of the dataset go from 0 to 2π, although the text of the
+   course says [−π, π]. `atan2` gives a value in [−π, π]. The notebook took a direct
+   difference of the two, so samples at the end of the range counted as a full circle.
+   The port uses `train.angular_error`, which wraps the difference. This changes the
+   error of the sine-cosine model from 0.0706 rad to 0.0126 rad.
 
 ---
 

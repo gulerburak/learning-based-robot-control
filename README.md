@@ -18,7 +18,7 @@ Simplified Technical English.
 
 | Project | What it shows | Result |
 |---|---|---|
-| **1. Vision** | The output representation of an angle changes the accuracy more than the network size. | **0.071 rad** with sine and cosine, against **0.530 rad** with the angle. The models differ by 31 parameters. |
+| **1. Vision** | The output representation of an angle changes the accuracy more than the network size. | **0.013 rad** with sine and cosine, against **0.508 rad** with the angle. The models differ by 31 parameters. |
 | **2. Control** | A Lagrangian Neural Network learns the dynamics well enough to replace the physical model in the controller. | **0.049 m** tip error with the learned model, against 0.049 m with the true model. |
 | **2. ILC** | Iterative Learning Control removes the effect of a model error of 80 %. | **0.034 m** tip error, which is better than a PD controller with the correct model. |
 | **3. GP** | The variance of a Gaussian process makes an unstable cloned controller stable. | **0.157 m** path RMSE, against 0.996 m without the variance term. |
@@ -32,13 +32,17 @@ Simplified Technical English.
 A CNN with 8000 parameters reads the angle of a pendulum from a 24x24 image. Two output
 representations are compared:
 
-* **Direct** — the network gives the angle. Error: 0.5301 ± 0.2476 rad.
+* **Direct** — the network gives the angle. Error: 0.5075 ± 0.0857 rad.
 * **Indirect** — the network gives the sine and the cosine, and `atan2` gives the angle.
-  Error: 0.0706 ± 0.0322 rad.
+  Error: 0.0126 ± 0.0033 rad.
 
-The direct model must learn a function with a step at ±π, because the angle wraps there.
-Two angles that are 0.02 rad apart get a penalty of 6.26 rad. The sine and the cosine have
-no step, so the same network becomes 7.5 times more accurate.
+The direct model must learn a function with a step where the angle wraps. Two angles that
+are 0.02 rad apart get a penalty of 6.26 rad. The sine and the cosine have no step, so the
+same network becomes 40 times more accurate.
+
+The error itself must also use the wrap of the circle. The original work took a direct
+difference, and that made its error for the sine-cosine model look five times larger than
+it is. `docs/results.md` gives the two numbers next to each other.
 
 ## 2. Model-based control, learned dynamics, iterative learning control
 

@@ -7,7 +7,7 @@ There are two methods:
 
 Both methods write the files `image{i}.npz` and `label{i}.npz` into the output folder.
 The image is a 500x500x3 array of `uint8`. The label is the link angle in rad, in the
-range [-pi, pi]. The angle is zero when the link points up, and it increases
+range [0, 2*pi). The angle is zero when the link points up, and it increases
 counterclockwise.
 """
 
@@ -43,14 +43,17 @@ def extract_zip(zip_path: Path, output_dir: Path):
 
 
 def render_dataset(output_dir: Path, num_samples: int = NUM_SAMPLES):
-    """Render one image for each angle, at equal steps over the full circle."""
+    """Render one image for each angle, at equal steps over the full circle.
+
+    The angles go from 0 to 2*pi, which is the range that the dataset of the course uses.
+    """
     import gymnasium as gym
 
     output_dir.mkdir(parents=True, exist_ok=True)
     env = gym.make("Pendulum-v1", render_mode="rgb_array")
     env.reset(seed=0)
 
-    angles = np.linspace(-np.pi, np.pi, num_samples, endpoint=False)
+    angles = np.linspace(0.0, 2 * np.pi, num_samples, endpoint=False)
     for index, angle in enumerate(tqdm(angles, desc="render")):
         env.unwrapped.state = np.array([angle, 0.0])
         image = env.render()

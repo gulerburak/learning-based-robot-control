@@ -9,7 +9,12 @@ project trains a small convolutional network that reads the angle of a pendulum 
 image.
 
 The dataset holds 3600 images of 500x500 pixels. Each image has one label: the angle of
-the link in rad, in the range [−π, π]. The angle is zero when the link points up.
+the link in rad, in the range **[0, 2π)**. The angle is zero when the link points up.
+
+> The text of the course says that the range is [−π, π]. The labels of the dataset do not
+> agree: they go from 0 to 6.264. This matters, because `atan2` gives a value in [−π, π].
+> A direct difference of the two counts a full circle as an error. See the note about the
+> error measure below.
 
 ## The method
 
@@ -29,16 +34,34 @@ The interesting part is the output. The same body gets two different heads:
 | `CNNTheta` | one value | the angle | the output |
 | `CNNTrig` | two values | the sine and the cosine | `atan2(sin, cos)` |
 
+## The error measure
+
+The error must use the wrap of the full circle:
+
+```python
+difference = predicted - target
+error = abs(atan2(sin(difference), cos(difference)))
+```
+
+Without the wrap, a prediction of −3.14 rad against a label of 3.14 rad counts as an error
+of 6.28 rad, although the two angles are 0.004 rad apart. The original work used a direct
+difference. Some samples at the end of the range therefore made its error larger than the
+true error. See the table below.
+
 ## The result
 
 Both models train for 50 epochs with SGD, in three runs with different seeds.
 
 | Model | Parameters | Mean absolute error |
 |---|---|---|
-| `CNNTheta`, direct | 8071 | **0.5301 ± 0.2476 rad** (about 30 degrees) |
-| `CNNTrig`, sine and cosine | 8102 | **0.0706 ± 0.0322 rad** (about 4 degrees) |
+| `CNNTheta`, direct | 8071 | **0.5075 ± 0.0857 rad** (about 29 degrees) |
+| `CNNTrig`, sine and cosine | 8102 | **0.0126 ± 0.0033 rad** (about 0.7 degrees) |
 
-31 more parameters make the model 7.5 times more accurate.
+31 more parameters make the model **40 times** more accurate.
+
+The original work recorded 0.5301 rad and 0.0706 rad. The direct model agrees. The value
+for the sine-cosine model was too large, because a small number of samples at the end of
+the range counted as a full circle.
 
 ## Why the difference is so large
 
@@ -55,7 +78,7 @@ The sine alone is not sufficient, because sin(θ) = sin(π − θ). Two differen
 give the same output.
 
 The figure `outputs/p1/error_vs_angle.pdf` shows the effect directly. The error of the
-direct model is largest near ±π.
+direct model is largest at the two ends of the range, where the angle wraps.
 
 ## How to run
 
@@ -78,3 +101,6 @@ The script writes the loss curves and the error-against-angle figure into `outpu
 3. The original made a validation set and never used it. The port measures the validation
    error in each epoch.
 4. The original printed the loss only. The port also makes figures.
+5. The original measured the angle error with a direct difference. The port uses the wrap
+   of the full circle, because the labels go from 0 to 2π and `atan2` gives a value in
+   [−π, π].

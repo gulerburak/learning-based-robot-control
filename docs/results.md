@@ -37,9 +37,20 @@ Per run:
 | 1 | 0.5037 → 0.000745 | 0.0015900 | 0.11200 |
 | 2 | 0.5010 → 0.000543 | 0.0003518 | 0.03347 |
 
-The sin/cos model is 7.5 times more accurate. The loss magnitudes differ because the
-outputs have different ranges: the angle has a range of 2π, and the sine and the cosine
-have a range of 2.
+The loss magnitudes differ because the outputs have different ranges: the angle has a
+range of 2π, and the sine and the cosine have a range of 2.
+
+**The error measure of the original is not correct.** The labels go from 0 to 2π, and
+`atan2` gives a value in [−π, π]. The original took a direct difference, so a small number
+of samples at the end of the range counted as a full circle. With the wrap of the full
+circle the same checkpoints give:
+
+| Model | Original measure | With the wrap |
+|---|---|---|
+| `CNNTheta` | 0.5301 ± 0.2476 rad | **0.5075 ± 0.0857 rad** |
+| `CNNTrig` | 0.0706 ± 0.0322 rad | **0.0126 ± 0.0033 rad** |
+
+The sine-cosine model is therefore 40 times more accurate, not 7.5 times.
 
 ---
 
@@ -181,6 +192,14 @@ The table shows a run of the code in this repo against the recorded value above.
 
 | Task | Recorded | This repo | Same? |
 |---|---|---|---|
+| 1b.1 CNN parameters | 8071 | 8071 | yes |
+| 1b.2 CNN parameters | 8102 | 8102 | yes |
+| 1b.1 direct angle error | 0.5301 rad | 0.5075 rad | near, see the note |
+| 1b.2 sine-cosine angle error | 0.0706 rad | 0.0126 rad | no, the measure is corrected |
+| 2c.3 best validation loss | 2.439e-07 | 2.4391e-07, epoch 248 | yes |
+| 2c.3 RMSE of the next speed | 4.94e-04 rad/s | 4.9387e-04 rad/s | yes |
+| 2c.4 rollout of the learned model | 0.0392 m | 0.0392 m | yes |
+| 2c.5 PD+ with the learned model | 0.0493 m | 0.0493 m | yes |
 | 2a.1.1 PD, link angles | 0.0635 m | 0.0635 m | yes |
 | 2a.1.2 PD, joint angles | 0.0501 m | 0.0501 m | yes |
 | 2a.2 PD + gravity compensation | 0.0269 m | 0.0269 m | yes |
@@ -202,6 +221,12 @@ The table shows a run of the code in this repo against the recorded value above.
 at different points. The order of the error stays the same (the constant mean is better),
 but the unsafe share is a small count on 206 test samples and it moves between runs. Do
 not read one run as proof of which mean function is safer.
+
+**The note about project 1.** The port sets the seed before the split, so the three
+subsets are not the same as the subsets of the original. The direct model therefore gives
+0.5075 rad instead of 0.5301 rad, and its spread across runs is smaller. The value for the
+sine-cosine model changes for a different reason: the measure itself is corrected. See the
+table above.
 
 **Tasks that need a long run.** The results of tasks 2c.3 to 2c.5 need the full training:
 250 simulations and 250 epochs, which is approximately one hour on a CPU. A short run (60

@@ -13,7 +13,6 @@ from tqdm import tqdm
 from p1_vision_state_estimation.models import CNNTheta, CNNTrig, count_parameters
 
 LOSS_FN = nn.MSELoss(reduction="mean")
-ERROR_FN = nn.L1Loss(reduction="mean")
 
 LEARNING_RATES = {"theta": 1e-3, "trig": 1e-2}
 MODELS = {"theta": CNNTheta, "trig": CNNTrig}
@@ -29,6 +28,18 @@ def _predict_angle(outputs: torch.Tensor, model_type: str) -> torch.Tensor:
     if model_type == "theta":
         return outputs.squeeze(-1)
     return torch.atan2(outputs[:, 0], outputs[:, 1])
+
+
+def angular_error(predicted: torch.Tensor, target: torch.Tensor) -> torch.Tensor:
+    """Give the absolute angle error, with the wrap at the full circle.
+
+    The labels of the dataset are in [0, 2*pi), and `atan2` gives a value in [-pi, pi].
+    A direct difference of the two therefore counts a full circle as an error. The
+    difference goes through sine and cosine, so that 0.1 rad and 2*pi + 0.1 rad are the
+    same angle.
+    """
+    difference = predicted - target
+    return torch.abs(torch.atan2(torch.sin(difference), torch.cos(difference)))
 
 
 @torch.no_grad()
@@ -49,7 +60,7 @@ def evaluate_model(
         loss_sum += LOSS_FN(outputs, target).item()
 
         angle_hat = _predict_angle(outputs, model_type)
-        error_sum += ERROR_FN(angle_hat, theta.squeeze(-1)).item()
+        error_sum += angular_error(angle_hat, theta.squeeze(-1)).mean().item()
 
     return loss_sum / len(loader), error_sum / len(loader)
 
@@ -162,7 +173,8 @@ def plot_error_against_angle(
 ):
     """Plot the absolute angle error against the true angle.
 
-    The direct model has its largest error near +-pi, because the angle wraps there.
+    The direct model has its largest error at the two ends of the range, because the
+    angle wraps there.
     """
     fig, ax = plt.subplots(figsize=(7, 4))
 
@@ -173,7 +185,7 @@ def plot_error_against_angle(
             angle = theta.squeeze(-1)
             angle_hat = _predict_angle(model(x), model_type)
             angles.append(angle.numpy())
-            errors.append((angle_hat - angle).abs().numpy())
+            errors.append(angular_error(angle_hat, angle).numpy())
         ax.scatter(
             np.concatenate(angles), np.concatenate(errors), s=4, alpha=0.4, label=model_type
         )
