@@ -10,7 +10,7 @@ import jax
 from jax import numpy as jnp
 from jax import random
 
-from p2_control.lnn import (
+from robot_control.lnn import (
     MassMatrixNN,
     PotentialEnergyNN,
     continuous_forward_dynamics,

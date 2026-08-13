@@ -1,6 +1,6 @@
 # Project 3 — Gaussian processes and behavioural cloning
 
-Code: `p3_gp_learning/` · Library: GPyTorch
+Code: `gp_learning/` · Library: GPyTorch
 
 A neural network gives an answer everywhere, and it gives no warning when it does not
 know. A Gaussian process gives an answer and a variance. This project shows what that
@@ -30,7 +30,7 @@ approximation, and the model reports it.
 | Exact GP. It follows the yield point, and the confidence band is thin. | Sparse GP, 10 inducing points (black crosses). The curve is smoother and the band is wider. |
 
 ```bash
-python -m p3_gp_learning.tasks.gp_tensile
+python -m gp_learning.tasks.gp_tensile
 ```
 
 ### The strength of concrete (eight inputs)
@@ -61,7 +61,7 @@ large value.
 > stable. Do not read one run as proof of which mean function is safer.
 
 ```bash
-python -m p3_gp_learning.tasks.gp_concrete
+python -m gp_learning.tasks.gp_concrete
 ```
 
 ---
@@ -107,9 +107,9 @@ slowly with the speed. The angles have short lengthscales, because gravity chang
 with the angle.
 
 ```bash
-python -m p3_gp_learning.tasks.make_robot_datasets   # run first
-python -m p3_gp_learning.tasks.dynamics_gp
-python -m p3_gp_learning.tasks.dynamics_mlp
+python -m gp_learning.tasks.make_robot_datasets   # run first
+python -m gp_learning.tasks.dynamics_gp
+python -m gp_learning.tasks.dynamics_mlp
 ```
 
 ---
@@ -156,7 +156,8 @@ position. The uncertainty of the model does the work.
 
 ### The same idea with the path only
 
-Task 3g removes the teacher. The GP sees the reference path only, and it learns
+The second experiment removes the teacher. The GP sees the reference path only, and
+it learns
 
     (angles now) → (change of the angles over one time step)
 
@@ -169,7 +170,7 @@ term and no gravity compensation.
 | Plus gravity compensation, damping and the variance term | 2.025 m | 3.30 m |
 
 The damping term and the variance term make the error smaller, but this controller stays
-much weaker than the controller of task 3f. The cause is the signal itself: the change of
+much weaker than the torque clone above. The cause is the signal itself: the change of
 the angle over one time step is approximately 0.01 rad, so the torque is small against the
 gravity torque of the arm. The gains are kp = 500, kd = 2.0 and k_var = 1.0.
 
@@ -178,8 +179,8 @@ and without a speed measurement gets a weak signal, and no gain makes that signa
 without noise.
 
 ```bash
-python -m p3_gp_learning.tasks.clone_torques
-python -m p3_gp_learning.tasks.clone_reference
+python -m gp_learning.tasks.clone_torques
+python -m gp_learning.tasks.clone_reference
 ```
 
 ---

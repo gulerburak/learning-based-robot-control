@@ -2,8 +2,8 @@
 outputs/
 
 # Data that the scripts make
-data/p2/
-data/p3/
+data/control/
+data/gp/
 data/pendulum_images/
 data/*.gif
 

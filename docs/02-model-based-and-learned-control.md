@@ -1,6 +1,6 @@
 # Project 2 — Model-based control, learned dynamics, iterative learning control
 
-Code: `p2_control/` · Libraries: JAX, Flax, Optax
+Code: `robot_control/` · Libraries: JAX, Flax, Optax
 
 The robot is a planar 2-link pendulum. The task is always the same: the tip must follow an
 ellipse. The robot starts away from the path, so the controller must correct an error.
@@ -31,9 +31,9 @@ error dynamics linear, so the feedback term has little work to do. A small gain 
 soft robot, and a soft robot is safer near a person.
 
 ```bash
-python -m p2_control.tasks.pd_control
-python -m p2_control.tasks.pd_gravity_compensation
-python -m p2_control.tasks.pd_plus
+python -m robot_control.tasks.pd_control
+python -m robot_control.tasks.pd_gravity_compensation
+python -m robot_control.tasks.pd_plus
 ```
 
 ---
@@ -87,10 +87,10 @@ feedforward term. The lower row shows the error. It starts at the deliberate off
 goes to zero.*
 
 ```bash
-python -m p2_control.tasks.collect_dataset   # approximately 5 minutes
-python -m p2_control.tasks.train_lnn         # approximately 1 hour on a CPU
-python -m p2_control.tasks.rollout_lnn
-python -m p2_control.tasks.control_with_lnn
+python -m robot_control.tasks.collect_dataset   # approximately 5 minutes
+python -m robot_control.tasks.train_lnn         # approximately 1 hour on a CPU
+python -m robot_control.tasks.rollout_lnn
+python -m robot_control.tasks.control_with_lnn
 ```
 
 ---
@@ -137,9 +137,9 @@ path, and each run makes the torque of the next run better. After approximately 
 the error stops to decrease.*
 
 ```bash
-python -m p2_control.tasks.linearize
-python -m p2_control.tasks.pd_ilc     # approximately 3 minutes
-python -m p2_control.tasks.q_ilc      # approximately 10 minutes, P goes into a cache
+python -m robot_control.tasks.linearize
+python -m robot_control.tasks.pd_ilc     # approximately 3 minutes
+python -m robot_control.tasks.q_ilc      # approximately 10 minutes, P goes into a cache
 ```
 
 ---

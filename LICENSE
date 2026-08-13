@@ -2,11 +2,11 @@ MIT License
 
 Copyright (c) 2026 Burak Gyuler
 
-The folder `jax_double_pendulum/` is a copy of the simulator of the course RO47019
-"Intelligent Control Systems" at Delft University of Technology. It is also MIT licensed.
+The folder `jax_double_pendulum/`, and the files `ilc.py`, `ilc_analysis.py` and
+`lnn_analysis.py` in `robot_control/`, are third-party work under the same licence.
 
 Copyright (c) 2024-2026 Maximilian Stölzle, Chuhan Zhang, Lorenzo Lyons,
-Giovanni Franzese, Tomás Coleman, Jingyue Liu (Delft University of Technology)
+Giovanni Franzese, Tomás Coleman, Jingyue Liu
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal

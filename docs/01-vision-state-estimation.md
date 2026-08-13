@@ -1,6 +1,6 @@
 # Project 1 — Vision-based state estimation
 
-Code: `p1_vision_state_estimation/` · Library: PyTorch
+Code: `vision_state_estimation/` · Library: PyTorch
 
 ## The problem
 
@@ -89,10 +89,10 @@ is after all 50 epochs, and then it goes to almost zero. The direct model stays 
 
 ```bash
 # Make the images (needs gymnasium), or unpack an archive that you have
-python -m p1_vision_state_estimation.make_dataset --render
+python -m vision_state_estimation.make_dataset --render
 
 # Train both models
-python -m p1_vision_state_estimation.run --model both --epochs 50 --runs 3
+python -m vision_state_estimation.run --model both --epochs 50 --runs 3
 ```
 
-The script writes the loss curves and the error-against-angle figure into `outputs/p1/`.
+The script writes the loss curves and the error-against-angle figure into `outputs/vision/`.

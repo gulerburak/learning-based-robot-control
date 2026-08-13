@@ -24,7 +24,7 @@ Three projects on one 2-link robot arm. They answer three questions:
 
 ## 1. Vision-based state estimation
 
-`p1_vision_state_estimation/` · PyTorch · [full page](docs/01-vision-state-estimation.md)
+`vision_state_estimation/` · PyTorch · [full page](docs/01-vision-state-estimation.md)
 
 A CNN with 8000 parameters reads the angle of a pendulum from a 24x24 image. Two output
 representations are compared:
@@ -48,7 +48,7 @@ where the angle wraps. The sine-cosine model (orange) stays flat over the full c
 
 ## 2. Model-based control, learned dynamics, iterative learning control
 
-`p2_control/` · JAX, Flax, Optax · [full page](docs/02-model-based-and-learned-control.md)
+`robot_control/` · JAX, Flax, Optax · [full page](docs/02-model-based-and-learned-control.md)
 
 The robot must follow an ellipse. It starts away from the path.
 
@@ -78,7 +78,7 @@ problem. After 1000 runs the tip error is 0.0335 m, although the model stays wro
 
 ## 3. Gaussian processes and behavioural cloning
 
-`p3_gp_learning/` · GPyTorch · [full page](docs/03-gaussian-processes-and-cloning.md)
+`gp_learning/` · GPyTorch · [full page](docs/03-gaussian-processes-and-cloning.md)
 
 What a GP gives. An exact GP and a sparse GP fit a tensile test of steel. An ARD model
 predicts the strength of concrete and finds by itself that the age of the sample has the
@@ -123,26 +123,26 @@ because the ILC tasks need 64-bit floats.
 
 ```bash
 # Project 2 — seconds each
-python -m p2_control.tasks.pd_control
-python -m p2_control.tasks.pd_gravity_compensation
-python -m p2_control.tasks.pd_plus
-python -m p2_control.tasks.linearize
+python -m robot_control.tasks.pd_control
+python -m robot_control.tasks.pd_gravity_compensation
+python -m robot_control.tasks.pd_plus
+python -m robot_control.tasks.linearize
 
 # Project 3 — minutes
-python -m p3_gp_learning.tasks.gp_tensile
-python -m p3_gp_learning.tasks.make_robot_datasets
-python -m p3_gp_learning.tasks.dynamics_gp
-python -m p3_gp_learning.tasks.clone_torques
+python -m gp_learning.tasks.gp_tensile
+python -m gp_learning.tasks.make_robot_datasets
+python -m gp_learning.tasks.dynamics_gp
+python -m gp_learning.tasks.clone_torques
 
 # Project 1 — make the images first
-python -m p1_vision_state_estimation.make_dataset --render
-python -m p1_vision_state_estimation.run
+python -m vision_state_estimation.make_dataset --render
+python -m vision_state_estimation.run
 
 # Long jobs. Each has flags that make it shorter.
-python -m p2_control.tasks.collect_dataset   # approximately 5 minutes
-python -m p2_control.tasks.train_lnn         # approximately 1 hour on a CPU
-python -m p2_control.tasks.pd_ilc            # approximately 3 minutes
-python -m p2_control.tasks.q_ilc             # approximately 10 minutes
+python -m robot_control.tasks.collect_dataset   # approximately 5 minutes
+python -m robot_control.tasks.train_lnn         # approximately 1 hour on a CPU
+python -m robot_control.tasks.pd_ilc            # approximately 3 minutes
+python -m robot_control.tasks.q_ilc             # approximately 10 minutes
 ```
 
 All scripts have an `argparse` interface. Use `--help`. The figures go into `outputs/`.
@@ -160,11 +160,11 @@ The test checks the Lagrangian Neural Network against reference values.
 
 | Path | Content |
 |---|---|
-| `p1_vision_state_estimation/` | The dataset, the two CNNs, the training loop. |
-| `p2_control/` | The controllers, the Lagrangian Neural Network, the linearization, PD-ILC and Q-ILC. `tasks/` holds the runnable scripts. |
-| `p3_gp_learning/` | The GP models, the MLP, the cloned controllers. `tasks/` holds the runnable scripts. |
+| `vision_state_estimation/` | The dataset, the two CNNs, the training loop. |
+| `robot_control/` | The controllers, the Lagrangian Neural Network, the linearization, PD-ILC and Q-ILC. `tasks/` holds the runnable scripts. |
+| `gp_learning/` | The GP models, the MLP, the cloned controllers. `tasks/` holds the runnable scripts. |
 | `jax_double_pendulum/` | The robot simulator. See the credit below. |
-| `docs/` | One page for each project, and the recorded results. |
+| `docs/` | One page for each project, and the measured results. |
 | `data/` | The small datasets. See [data/README.md](data/README.md). |
 | `tests/` | The reference test of the Lagrangian Neural Network. |
 
@@ -172,21 +172,11 @@ The test checks the Lagrangian Neural Network against reference values.
 
 ## Credit
 
-The folder `jax_double_pendulum/` is the simulator of the course RO47019 "Intelligent
-Control Systems" at Delft University of Technology. It gives the dynamics, the kinematics,
-the trajectory generator and the plot helpers. It is copied without change, and it is MIT
-licensed. Authors: Maximilian Stölzle, Chuhan Zhang, Lorenzo Lyons, Giovanni Franzese,
-Tomás Coleman and Jingyue Liu. Source:
-[tud-phi/ics-pa-sv](https://github.com/tud-phi/ics-pa-sv).
-
-Some plot helpers in `p2_control/` (`ilc.py`, `ilc_analysis.py`, `lnn_analysis.py`) also
-come from the course.
-
-## A note about the course
-
-This work started as the practical assignment of RO47019 at TU Delft. The course still
-runs. If you follow that course, do not copy this code. You will learn nothing, and
-your school has rules against it. Read `docs/` instead, and then write your own solution.
+The folder `jax_double_pendulum/` holds the robot simulator: the dynamics, the
+kinematics, the trajectory generator and the plot helpers. It is third-party work under
+the MIT licence, and it is used without change. The plot helpers `ilc.py`,
+`ilc_analysis.py` and `lnn_analysis.py` in `robot_control/` have the same origin.
+[LICENSE](LICENSE) names the copyright holders.
 
 ## Licence
 

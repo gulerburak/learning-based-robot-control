@@ -41,9 +41,9 @@ dev = ["black", "pytest"]
 [tool.setuptools.packages.find]
 include = [
     "jax_double_pendulum*",
-    "p1_vision_state_estimation*",
-    "p2_control*",
-    "p3_gp_learning*",
+    "vision_state_estimation*",
+    "robot_control*",
+    "gp_learning*",
 ]
 
 [tool.black]

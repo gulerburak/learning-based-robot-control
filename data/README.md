@@ -17,9 +17,9 @@ These datasets are not in git. Make them with the scripts.
 
 | Folder | Made by | Content |
 |---|---|---|
-| `pendulum_images/` | `python -m p1_vision_state_estimation.make_dataset --render` | 3600 images of a pendulum, 500x500x3, with the angle as the label. |
-| `p2/` | `python -m p2_control.tasks.collect_dataset` | 249750 transitions of the robot dynamics, for the Lagrangian Neural Network. |
-| `p3/` | `python -m p3_gp_learning.tasks.make_robot_datasets` | Three tables of robot runs: a small oscillation, a large oscillation, and a run with a PD controller. |
+| `pendulum_images/` | `python -m vision_state_estimation.make_dataset --render` | 3600 images of a pendulum, 500x500x3, with the angle as the label. |
+| `control/` | `python -m robot_control.tasks.collect_dataset` | 249750 transitions of the robot dynamics, for the Lagrangian Neural Network. |
+| `gp/` | `python -m gp_learning.tasks.make_robot_datasets` | Three tables of robot runs: a small oscillation, a large oscillation, and a run with a PD controller. |
 
 ### The pendulum images
 
@@ -29,11 +29,11 @@ increases counterclockwise.
 
 ```bash
 pip install -e ".[render]"
-python -m p1_vision_state_estimation.make_dataset --render --gif
+python -m vision_state_estimation.make_dataset --render --gif
 ```
 
 If you already have an archive of the images, use it instead. It gives the same files:
 
 ```bash
-python -m p1_vision_state_estimation.make_dataset --zip path/to/pendulum_dataset.zip
+python -m vision_state_estimation.make_dataset --zip path/to/pendulum_dataset.zip
 ```
