@@ -240,5 +240,5 @@ there is nothing to compare. A run of this repo gives:
 |---|---|---|---|
 | 3f | the cloned policy alone | 0.996 m | 2.08 m |
 | 3f | plus the variance term, k_var = 2.0 | 0.157 m | 0.40 m |
-| 3g | the cloned policy alone | see the log | 4.62 m |
-| 3g | plus damping and the variance term | see the log | 3.30 m |
+| 3g | the cloned policy alone | 2.558 m | 4.62 m |
+| 3g | plus damping and the variance term | 2.025 m | 3.30 m |

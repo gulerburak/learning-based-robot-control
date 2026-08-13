@@ -150,10 +150,10 @@ Task 3g removes the teacher. The GP sees the reference path only, and it learns
 A gain makes a torque from that change. Alone this fails, because there is still no speed
 term and no gravity compensation.
 
-| Controller | Largest error of the tip |
-|---|---|
-| The cloned policy alone | 4.62 m |
-| Plus gravity compensation, damping and the variance term | 3.30 m |
+| Controller | RMSE of the tip | Largest error |
+|---|---|---|
+| The cloned policy alone | 2.558 m | 4.62 m |
+| Plus gravity compensation, damping and the variance term | 2.025 m | 3.30 m |
 
 The damping term and the variance term make the error smaller, but this controller stays
 much weaker than the controller of task 3f. The cause is the signal itself: the change of
