@@ -32,7 +32,7 @@ pip install -e ".[render]"
 python -m p1_vision_state_estimation.make_dataset --render --gif
 ```
 
-If you have the archive of the course, use it instead. It gives the same files:
+If you already have an archive of the images, use it instead. It gives the same files:
 
 ```bash
 python -m p1_vision_state_estimation.make_dataset --zip path/to/pendulum_dataset.zip

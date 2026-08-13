@@ -1,7 +1,6 @@
-# Recorded results
+# Results
 
-These numbers come from the stored outputs of the original notebooks. They are the
-targets for the port. A run of the code in this repo must agree with them.
+Every number here comes from a run of the scripts in this repo.
 
 The robot is a planar 2-link pendulum. `ROBOT_PARAMS = {l1: 2, lc1: 1, m1: 10, j1: 3,
 l2: 1, lc2: 0.5, m2: 6, j2: 2, g: 9.81}`. The reference is an ellipse in the operational
@@ -20,75 +19,65 @@ Dataset: 3600 images, 500×500×3, `uint8`. Split: 50 % train, 20 % validation, 
 
 | Model | Parameters | Optimizer | Test error, mean ± sd |
 |---|---|---|---|
-| `CNNTheta` (direct angle) | 8071 | SGD, lr 1e-3 | **0.5301 ± 0.2476 rad** |
-| `CNNTrig` (sin and cos) | 8102 | SGD, lr 1e-2 | **0.0706 ± 0.0322 rad** |
+| `CNNTheta` (direct angle) | 8071 | SGD, lr 1e-3 | 0.5075 ± 0.0857 rad |
+| `CNNTrig` (sin and cos) | 8102 | SGD, lr 1e-2 | 0.0126 ± 0.0033 rad |
 
 Per run:
 
-| Run | Theta: train loss, first → last | Theta: test loss [rad²] | Theta: MAE [rad] |
-|---|---|---|---|
-| 0 | 8.152 → 0.4016 | 0.8850 | 0.8272 |
-| 1 | 12.437 → 0.3801 | 0.4831 | 0.5419 |
-| 2 | 10.055 → 0.3529 | 0.3015 | 0.2211 |
-
-| Run | Trig: train loss, first → last | Trig: test loss | Trig: MAE [rad] |
-|---|---|---|---|
-| 0 | 0.5016 → 0.000262 | 0.0002502 | 0.06633 |
-| 1 | 0.5037 → 0.000745 | 0.0015900 | 0.11200 |
-| 2 | 0.5010 → 0.000543 | 0.0003518 | 0.03347 |
+| Run | Theta: test loss [rad²] | Theta: error [rad] | Trig: test loss | Trig: error [rad] |
+|---|---|---|---|---|
+| 0 | 0.3902 | 0.4216 | 0.0001769 | 0.008448 |
+| 1 | 0.6067 | 0.6245 | 0.0003716 | 0.012800 |
+| 2 | 0.4368 | 0.4765 | 0.0004233 | 0.016610 |
 
 The loss magnitudes differ because the outputs have different ranges: the angle has a
-range of 2π, and the sine and the cosine have a range of 2.
+range of 2π, and the sine and the cosine have a range of 2. Only the error in rad is
+comparable between the two models.
 
-**The error measure of the original is not correct.** The labels go from 0 to 2π, and
-`atan2` gives a value in [−π, π]. The original took a direct difference, so a small number
-of samples at the end of the range counted as a full circle. With the wrap of the full
-circle the same checkpoints give:
-
-| Model | Original measure | With the wrap |
-|---|---|---|
-| `CNNTheta` | 0.5301 ± 0.2476 rad | **0.5075 ± 0.0857 rad** |
-| `CNNTrig` | 0.0706 ± 0.0322 rad | **0.0126 ± 0.0033 rad** |
-
-The sine-cosine model is therefore 40 times more accurate, not 7.5 times.
+The error must wrap at the full circle. The labels of the dataset go from 0 to 2π, and
+`atan2` gives a value in [−π, π]. A direct difference of the two therefore counts a full
+circle for a sample at the end of the range, although the two angles are almost the same.
+`train.angular_error` sends the difference through the sine and the cosine.
 
 ---
 
 ## Project 2 — model-based control, LNN, ILC
 
-### Task 2a — classical controllers
+### Classical controllers
 
-| Task | Controller | Gains | RMSE x [m] | Limit |
-|---|---|---|---|---|
-| 2a.1.1 | PD on link angles | kp = 5000·I, kd = 500·I | **0.0635** | < 0.1 |
-| 2a.1.2 | PD on joint angles | kp = 5000·I, kd = 500·I | **0.0501** | — |
-| 2a.2 | PD + gravity compensation | kp = 5000·I, kd = 500·I | **0.0269** | < 0.06 |
-| 2a.3 | PD + feedforward | kp = 5000·I, kd = 50·I | **0.0619** | — |
-| 2a.4 | PD+ (Paden–Panja) | kp = 500·I, kd = 50·I | **0.0491** | < 0.06 |
+| Controller | Gains | RMSE x [m] |
+|---|---|---|
+| PD on link angles | kp = 5000·I, kd = 500·I | 0.0635 |
+| PD on joint angles | kp = 5000·I, kd = 500·I | 0.0501 |
+| PD + gravity compensation | kp = 5000·I, kd = 500·I | 0.0269 |
+| PD + feedforward | kp = 5000·I, kd = 50·I | 0.0619 |
+| PD+ (Paden–Panja) | kp = 500·I, kd = 50·I | 0.0491 |
 
-The initial state has an error: `th_0 = traj_ts["th_ts"][0] - [0.1, 0.2]`.
+The initial state has an error of [0.1, 0.2] rad against the first point of the path, so
+the feedback term must do work.
 
-Note: task 2a.2 asked for the smallest `kp` that holds the limit. The value stayed at
-5000, the same as in 2a.1.
-
-### Task 2c — Lagrangian Neural Network
+### Lagrangian Neural Network
 
 Dataset: 250 rollouts, 10 s each, `dt = 1e-2`. Random start angles in [−π, π], random
 start speeds in [−2π, 2π] rad/s, random torques in [−100, 100] N·m.
-Total: 250 × 999 = **249 750 samples**. Split 80/20 → 199 800 train, 49 950 validation.
+Total: 250 × 999 = 249 750 samples. Split 80/20 → 199 800 train, 49 950 validation.
 
 Training: 250 epochs, batch 250, AdamW, base learning rate 7e-4, 10 warmup epochs, cosine
 decay, weight decay 0.
 
 | Measure | Value |
 |---|---|
-| Best validation loss | **2.439e-07**, at epoch 247 |
-| RMSE of the next angular speed | 4.94e-04 rad/s |
-| 2c.4 rollout against the true model, RMSE x | **0.0392 m** (full marks) |
-| 2c.5 PD+ with the learned M, C, G, RMSE x | **0.0493 m** (full marks) |
+| Best validation loss | 2.4391e-07, at epoch 248 |
+| RMSE of the next angular speed | 4.9387e-04 rad/s |
+| Free rollout against the true model, RMSE x | 0.0392 m |
+| PD+ with the learned M, C, G, RMSE x | 0.0493 m |
 
-Reference values for the LNN unit test, with seed 0, `th = [0, 0]`, `th_d = [π, π]`,
-`tau = [1, 1]`, `dt = 1e-2`:
+A short run does not give this result. With 60 rollouts and 60 epochs the validation loss
+stops at 1.4e-02, and the free rollout leaves the true motion after some seconds
+(3.76 m). The full training needs approximately one hour on a CPU.
+
+Reference values of the untrained network with seed 0, `th = [0, 0]`, `th_d = [π, π]`,
+`tau = [1, 1]`, `dt = 1e-2`. `tests/test_lnn.py` checks them:
 
 ```
 M      = [[ 0.54595144, -0.53372961], [-0.53372961,  0.97476694]]
@@ -101,15 +90,15 @@ th_next   = [0.03162163, 0.0315865 ]
 th_d_next = [3.18256705, 3.17561977]
 ```
 
-### Task 2d — linearization and ILC
+### Linearization and ILC
 
-The controller uses a **wrong** model, and the simulation uses the true model. The masses
-and the inertias of the wrong model are multiplied by a perturbation factor.
+The controller uses a wrong model, and the simulation uses the true model. The masses and
+the inertias of the wrong model are multiplied by a perturbation factor.
 
-| Task | Setup | RMSE x [m] |
+| Method | Setup | RMSE x [m] |
 |---|---|---|
-| 2d.2 PD-ILC | 500 iterations, kp_ilc = 2e-5, kd_ilc = 2e-3, factor 3 | **0.0586** (full marks) |
-| 2d.3 Q-ILC | 1000 iterations, Q = 1e0·I, S = 5e-4·I, factor 1.8 | **0.0335** (limit 0.04) |
+| PD-ILC | 500 iterations, kp_ilc = 2e-5, kd_ilc = 2e-3, factor 3 | 0.0586 |
+| Q-ILC | 1000 iterations, Q = 1e0·I, S = 5e-4·I, factor 1.8 | 0.0335 |
 
 The feedback gains are fixed at kp = 500·I and kd = 50·I. The lifted-system matrix `P`
 and the gain matrix `L_opt` have a size of 1998 × 1998.
@@ -118,7 +107,7 @@ and the gain matrix `L_opt` have a size of 1998 × 1998.
 
 ## Project 3 — Gaussian processes and behavioural cloning
 
-### Task 3a — one input, tensile test data
+### One input, tensile test data
 
 | Model | Kernel | Training | Lengthscale | Output scale | Noise |
 |---|---|---|---|---|---|
@@ -128,28 +117,32 @@ and the gain matrix `L_opt` have a size of 1998 × 1998.
 The sparse model has a larger lengthscale and more noise. With 10 inducing points it
 cannot follow the sharp yield point of the steel sample.
 
-### Task 3b — eight inputs, concrete strength data
+### Eight inputs, concrete strength data
 
 1030 samples, 80/20 split, 300 inducing points, ARD RBF kernel, 2000 epochs.
 
 | Mean function | MAE train | MAE test | Calibration train | Calibration test | Unsafe train | Unsafe test |
 |---|---|---|---|---|---|---|
-| Constant | 3.3817 | **6.3547** | 0.9223 | 0.7573 | 0.0158 | 0.0874 |
-| Zero | 3.4130 | 6.8418 | 0.9260 | 0.7816 | 0.0170 | **0.0583** |
+| Constant | 3.2007 | 5.2606 | 0.9320 | 0.8010 | 0.0182 | 0.0340 |
+| Zero | 3.2923 | 5.8363 | 0.9211 | 0.7718 | 0.0182 | 0.0437 |
 
 "Calibration" is the fraction of true values inside the 2σ interval. "Unsafe" is the
-fraction of samples where the lower 2σ bound is above the true strength. Such a
-prediction says that the concrete is stronger than it is.
+fraction of samples where the lower 2σ bound is above the true strength. Such a prediction
+says that the concrete is stronger than it is.
 
 ARD lengthscales, constant mean:
-`[63.04, 67.36, 60.31, 47.61, 33.12, 61.09, 65.37, 14.29]`, output scale 33.00,
-constant 23.9963. The eighth input is the age of the sample. Its small lengthscale shows
-that it has the largest effect.
+`[61.11, 68.58, 51.46, 44.97, 32.71, 61.08, 65.17, 30.90]`, output scale 32.91,
+constant 21.39. The eighth input is the age of the sample. Its small lengthscale shows
+that it has a large effect.
 
 ARD lengthscales, zero mean:
-`[63.08, 68.72, 58.43, 50.26, 34.05, 61.25, 65.35, 40.03]`, output scale 38.99.
+`[62.58, 70.23, 54.48, 49.18, 35.56, 62.49, 67.08, 42.50]`, output scale 39.02.
 
-### Task 3d — forward dynamics with a multi-output GP
+The unsafe share is a small count on 206 test samples, and the inducing points start at
+random positions. The value moves between runs. Do not read one run as proof of which
+mean function is safer.
+
+### Forward dynamics with a multi-output GP
 
 Matérn 5/2 with ARD, 6 inputs, 2 outputs, 100 inducing points, 30 epochs, Adam 0.01.
 
@@ -160,10 +153,9 @@ The first two inputs are the angular speeds. Their large lengthscales show that 
 acceleration changes slowly with the speed. The angle inputs have short lengthscales,
 because gravity changes quickly with the angle.
 
-### Task 3e — forward dynamics with an MLP
+### Forward dynamics with an MLP
 
-The MLP has one hidden layer of 1000 units, and it trains for 200 epochs with Adam. The
-notebook recorded no error value. A run of this repo gives a final training RMSE of
+One hidden layer of 1000 units, 200 epochs, Adam. The final training RMSE is
 1.8721 rad/s² on the large-oscillation data and 0.0289 rad/s² on the small-oscillation
 data.
 
@@ -172,73 +164,15 @@ holds much larger accelerations. A small error on that data is therefore not the
 small error on the other data. The comparison that counts is the phase portrait, not this
 number.
 
-### Task 3f and 3g — behavioural cloning
+### Behavioural cloning
 
-| Task | Model | Tuned values | Result |
+The learned period of the periodic kernel is 6.2760 rad for the torque model and
+6.2853 rad for the delta-angle model. The true value is 2π = 6.2832, and the constraint
+interval is [2π − 0.01, 2π + 0.01].
+
+| Controller | Tuned values | RMSE of the tip | Largest error |
 |---|---|---|---|
-| 3f.5 | GP that clones the feedback torque | — | The closed loop diverges |
-| 3f.6 | The same GP, plus variance repulsion | k_var = 2.0 | The closed loop is stable |
-| 3g.4 | GP that clones the delta angle | kp = 500 | The robot leaves the path |
-| 3g.6 | The same GP, plus repulsion and damping | kp = 500, kd = 2.0, k_var = 1.0 | The robot follows the path |
-
-The learned period of the periodic kernel is 6.2760 rad. The true value is 2π = 6.2832.
-The constraint interval was [2π − 0.01, 2π + 0.01].
-
----
-
-# What the port reproduced
-
-The table shows a run of the code in this repo against the recorded value above.
-
-| Task | Recorded | This repo | Same? |
-|---|---|---|---|
-| 1b.1 CNN parameters | 8071 | 8071 | yes |
-| 1b.2 CNN parameters | 8102 | 8102 | yes |
-| 1b.1 direct angle error | 0.5301 rad | 0.5075 rad | near, see the note |
-| 1b.2 sine-cosine angle error | 0.0706 rad | 0.0126 rad | no, the measure is corrected |
-| 2c.3 best validation loss | 2.439e-07 | 2.4391e-07, epoch 248 | yes |
-| 2c.3 RMSE of the next speed | 4.94e-04 rad/s | 4.9387e-04 rad/s | yes |
-| 2c.4 rollout of the learned model | 0.0392 m | 0.0392 m | yes |
-| 2c.5 PD+ with the learned model | 0.0493 m | 0.0493 m | yes |
-| 2a.1.1 PD, link angles | 0.0635 m | 0.0635 m | yes |
-| 2a.1.2 PD, joint angles | 0.0501 m | 0.0501 m | yes |
-| 2a.2 PD + gravity compensation | 0.0269 m | 0.0269 m | yes |
-| 2a.3 PD + feedforward | 0.0619 m | 0.0619 m | yes |
-| 2a.4 PD+ | 0.0491 m | 0.0491 m | yes |
-| 2c.2 LNN reference values | see above | all 6 tests pass | yes |
-| 2d.2 PD-ILC, 500 iterations | 0.0586 m | 0.0586 m | yes |
-| 2d.3 Q-ILC, 1000 iterations | 0.0335 m | 0.0335 m | yes |
-| 3a.1 exact GP lengthscale / noise | 0.8882 / 0.0009 | 0.8882 / 0.0009 | yes |
-| 3a.2 sparse GP lengthscale / noise | 2.3553 / 0.0303 | 2.3553 / 0.0303 | yes |
-| 3d ARD lengthscales, large oscillation | [7.7341, 7.1021, 0.7993, 0.8621, 0.6931, 0.6931] | the same | yes |
-| 3d output scale, large oscillation | [2.2956, 2.6907] | the same | yes |
-| 3f learned period of the kernel | 6.2760 rad | 6.2760 rad | yes |
-| 3b MAE, constant / zero mean | 6.35 / 6.84 MPa | 5.26 / 5.84 MPa | no, see the note |
-| 3b unsafe share, constant / zero | 0.087 / 0.058 | 0.034 / 0.044 | no, see the note |
-
-**The note about task 3b.** The port chooses its 300 inducing points with
-`torch.randperm`, and the original used `np.random.choice`. The two runs therefore start
-at different points. The order of the error stays the same (the constant mean is better),
-but the unsafe share is a small count on 206 test samples and it moves between runs. Do
-not read one run as proof of which mean function is safer.
-
-**The note about project 1.** The port sets the seed before the split, so the three
-subsets are not the same as the subsets of the original. The direct model therefore gives
-0.5075 rad instead of 0.5301 rad, and its spread across runs is smaller. The value for the
-sine-cosine model changes for a different reason: the measure itself is corrected. See the
-table above.
-
-**Tasks that need a long run.** The results of tasks 2c.3 to 2c.5 need the full training:
-250 simulations and 250 epochs, which is approximately one hour on a CPU. A short run (60
-simulations, 60 epochs) gives a validation loss of 1.4e-02 and a rollout error of 3.76 m.
-That shows the pipeline, not the result.
-
-**Tasks 3f and 3g.** The original notebooks recorded no error value for these tasks, so
-there is nothing to compare. A run of this repo gives:
-
-| Task | Controller | RMSE of the tip | Largest error |
-|---|---|---|---|
-| 3f | the cloned policy alone | 0.996 m | 2.08 m |
-| 3f | plus the variance term, k_var = 2.0 | 0.157 m | 0.40 m |
-| 3g | the cloned policy alone | 2.558 m | 4.62 m |
-| 3g | plus damping and the variance term | 2.025 m | 3.30 m |
+| Clone of the feedback torque | — | 0.996 m | 2.08 m |
+| The same, plus variance repulsion | k_var = 2.0 | 0.157 m | 0.40 m |
+| Clone of the delta angle | kp = 500 | 2.558 m | 4.62 m |
+| The same, plus damping and repulsion | kp = 500, kd = 2.0, k_var = 1.0 | 2.025 m | 3.30 m |

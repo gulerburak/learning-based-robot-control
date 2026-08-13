@@ -36,9 +36,9 @@ class PendulumImageDataset(Dataset):
       theta: float tensor of shape (1,), the link angle in rad, in [0, 2*pi)
       trig:  float tensor of shape (2,), the sine and the cosine of the angle
 
-    Note the range of `theta`. The text of the course says [-pi, pi], but the labels of
-    the dataset go from 0 to 2*pi. Any error measure must therefore use the wrap of the
-    full circle. See `train.angular_error`.
+    Note the range of `theta`. It is [0, 2*pi), and `atan2` gives a value in [-pi, pi].
+    Any error measure must therefore use the wrap of the full circle. See
+    `train.angular_error`.
     """
 
     def __init__(self, data_dir: Path):

@@ -1,12 +1,12 @@
 # Project 2 — Model-based control, learned dynamics, iterative learning control
 
-**Code:** `p2_control/` · **Libraries:** JAX, Flax, Optax
+Code: `p2_control/` · Libraries: JAX, Flax, Optax
 
 The robot is a planar 2-link pendulum. The task is always the same: the tip must follow an
 ellipse. The robot starts away from the path, so the controller must correct an error.
 
-The project answers one question in three steps: **what do you do when you do not have a
-good model of the robot?**
+The project answers one question in three steps: what do you do when you do not have a
+good model of the robot?
 
 ---
 
@@ -16,7 +16,7 @@ good model of the robot?**
 |---|---|---|
 | PD on the link angles | none | 0.0635 m |
 | PD on the joint angles | none | 0.0501 m |
-| PD + gravity compensation | G(θ) | **0.0269 m** |
+| PD + gravity compensation | G(θ) | 0.0269 m |
 | PD + inverse dynamics | M(θᵈ)θ̈ᵈ + C(θᵈ,θ̇ᵈ)θ̇ᵈ + G(θᵈ) | 0.0619 m |
 | PD+ (Paden–Panja) | M(θ)θ̈ᵈ + C(θ,θ̇)θ̇ᵈ + G(θ) | 0.0491 m |
 
@@ -25,7 +25,7 @@ Two results are worth attention.
 The joint-space PD controller is better than the link-space PD controller, although the
 gains are the same. The torque acts on the joints, so the error must be measured there.
 
-The PD+ controller reaches 0.0491 m with gains that are **ten times smaller** than the
+The PD+ controller reaches 0.0491 m with gains that are ten times smaller than the
 gains of the simple PD controller (500 against 5000). The feedforward term makes the
 error dynamics linear, so the feedback term has little work to do. A small gain means a
 soft robot, and a soft robot is safer near a person.
@@ -44,7 +44,7 @@ A network can learn the acceleration directly from (θ, θ̇, τ). Such a networ
 data, but it does not obey the physics. Its energy grows or falls without a cause, and a
 rollout over 10 s diverges.
 
-The Lagrangian Neural Network learns the **energy** instead:
+The Lagrangian Neural Network learns the energy instead:
 
 | Part | Network | Note |
 |---|---|---|
@@ -62,18 +62,29 @@ The loss compares the angular speed at the next time step. The prediction comes 
 RK4 step, so the gradient goes through the integrator and through all of those
 derivatives.
 
-**Training:** 249750 samples from 250 random rollouts, 250 epochs, AdamW, cosine decay
+Training: 249750 samples from 250 random rollouts, 250 epochs, AdamW, cosine decay
 with a warmup.
 
-**Result:** the validation loss falls to 2.44e-07. Then:
+Result: the validation loss falls to 2.44e-07. Then:
 
 | Test | RMSE of the tip |
 |---|---|
-| Free rollout over 10 s against the true model | **0.0392 m** |
-| PD+ control that uses the learned M, C and G | **0.0493 m** |
+| Free rollout over 10 s against the true model | 0.0392 m |
+| PD+ control that uses the learned M, C and G | 0.0493 m |
 
 The controller with the learned model is as good as the controller with the true model
 (0.0491 m). The network learned the physics, not only a fit of the data.
+
+![Training of the Lagrangian Neural Network](images/p2_lnn_convergence.png)
+
+*The loss falls over four orders of magnitude. The validation loss follows the training
+loss, so the network does not memorise the data.*
+
+![PD+ control with the learned dynamics](images/p2_lnn_control.png)
+
+*The tip position and speed against the reference, with the learned M, C and G in the
+feedforward term. The lower row shows the error. It starts at the deliberate offset and
+goes to zero.*
 
 ```bash
 python -m p2_control.tasks.collect_dataset   # approximately 5 minutes
@@ -89,12 +100,12 @@ python -m p2_control.tasks.control_with_lnn
 Sometimes you cannot learn a model, but the robot repeats the same path many times. ILC
 then learns a torque correction from the error of the last run.
 
-To show that this works, the controller uses a **wrong** model on purpose. Its masses and
+To show that this works, the controller uses a wrong model on purpose. Its masses and
 inertias are too large by a factor of 1.8 to 3.
 
 The method needs a linear model along the path:
 
-1. Write the closed loop (robot **and** its PD controller) in the state-space form.
+1. Write the closed loop (robot and its PD controller) in the state-space form.
 2. Take the Jacobian at every time step with forward-mode automatic differentiation.
 3. Discretize with a zero-order hold. This uses the matrix exponential of the block
    matrix [[A, B], [0, 0]].
@@ -104,8 +115,8 @@ The method needs a linear model along the path:
 
 | Method | Learning gains | Iterations | RMSE of the tip |
 |---|---|---|---|
-| PD-ILC | two scalars, tuned by hand | 500 | **0.0586 m** |
-| Q-ILC | from an LQR problem | 1000 | **0.0335 m** |
+| PD-ILC | two scalars, tuned by hand | 500 | 0.0586 m |
+| Q-ILC | from an LQR problem | 1000 | 0.0335 m |
 
 Q-ILC gives the gain matrix from a cost function:
 
@@ -117,7 +128,13 @@ A large `S` makes the convergence slower and the torque smoother. If both are mu
 by the same factor, nothing changes.
 
 The result is the important part: the model of the controller stays wrong, but the tip
-error falls to 0.0335 m. That is better than the PD controller with the **correct** model.
+error falls to 0.0335 m. That is better than the PD controller with the correct model.
+
+![Q-ILC convergence](images/p2_q_ilc_convergence.png)
+
+*The error of the two link angles against the iteration. The controller repeats the same
+path, and each run makes the torque of the next run better. After approximately 600 runs
+the error stops to decrease.*
 
 ```bash
 python -m p2_control.tasks.linearize
@@ -129,7 +146,7 @@ python -m p2_control.tasks.q_ilc      # approximately 10 minutes, P goes into a 
 
 ## Test
 
-`tests/test_lnn.py` checks the network against reference values of the course. It tests
+`tests/test_lnn.py` checks the network against reference values. It tests
 the construction of the mass matrix and all derivatives of the Lagrangian.
 
 ```bash

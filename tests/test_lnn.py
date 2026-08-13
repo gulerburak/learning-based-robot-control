@@ -1,4 +1,4 @@
-"""Check the Lagrangian Neural Network against the reference values of the course.
+"""Check the Lagrangian Neural Network against known reference values.
 
 The values come from an untrained network with seed 0. They test the construction of the
 mass matrix and the derivatives of the Lagrangian, not the quality of a trained model.

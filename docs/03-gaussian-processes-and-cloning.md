@@ -1,9 +1,9 @@
 # Project 3 — Gaussian processes and behavioural cloning
 
-**Code:** `p3_gp_learning/` · **Library:** GPyTorch
+Code: `p3_gp_learning/` · Library: GPyTorch
 
 A neural network gives an answer everywhere, and it gives no warning when it does not
-know. A Gaussian process gives an answer **and** a variance. This project shows what that
+know. A Gaussian process gives an answer and a variance. This project shows what that
 variance is good for, and ends with a controller that uses its own uncertainty as a
 feedback signal.
 
@@ -25,6 +25,10 @@ The sparse model cannot follow the sharp yield point with 10 points. It therefor
 the function smoother and calls the difference "noise". This is the cost of the
 approximation, and the model reports it.
 
+| ![Exact GP](images/p3_exact_gp.png) | ![Sparse GP](images/p3_sparse_gp.png) |
+|---|---|
+| Exact GP. It follows the yield point, and the confidence band is thin. | Sparse GP, 10 inducing points (black crosses). The curve is smoother and the band is wider. |
+
 ```bash
 python -m p3_gp_learning.tasks.gp_tensile
 ```
@@ -38,7 +42,7 @@ means a large effect.
 The age of the sample gets the smallest lengthscale by a large distance. The model found
 by itself that concrete becomes stronger with time.
 
-The interesting measure is not the error. It is the **unsafe share**: how often the lower
+The interesting measure is not the error. It is the unsafe share: how often the lower
 2σ bound of the model is still above the true strength. Such a prediction says that the
 concrete is stronger than it is, and a person could build with it.
 
@@ -51,11 +55,10 @@ A constant mean fits better, because the strength of concrete is not near zero. 
 the data, however, a zero mean falls back to zero and warns, and a constant mean keeps a
 large value.
 
-> **Note on the numbers.** The original notebook measured 6.35 MPa and 6.84 MPa, and it
-> found the zero mean safer (0.058 against 0.087). The port chooses its 300 inducing
-> points with a different random function, so the two runs are not identical. The
-> ordering of the error stays the same in both. The unsafe share is a small count on 206
-> test samples, so it moves between runs. Do not read one run as proof.
+> Note on the numbers. The 300 inducing points start at random training points, so the
+> values move between runs. The order of the error is stable: the constant mean always
+> fits better. The unsafe share is a small count on 206 test samples, and it is not
+> stable. Do not read one run as proof of which mean function is safer.
 
 ```bash
 python -m p3_gp_learning.tasks.gp_concrete
@@ -68,9 +71,9 @@ python -m p3_gp_learning.tasks.gp_concrete
 Both models learn the same map: the state and the torque of the robot give the angular
 accelerations. Two datasets are used:
 
-* **large oscillation** — the robot swings over the full circle, so the data covers the
+* large oscillation — the robot swings over the full circle, so the data covers the
   whole state space.
-* **small oscillation** — the robot hangs down and swings a little, so the data covers a
+* small oscillation — the robot hangs down and swings a little, so the data covers a
   small area near −π/2 only.
 
 The result is a phase portrait. The flow lines give the motion. For the GP the colour
@@ -82,10 +85,20 @@ With the small-oscillation data they do not:
 
 | | Outside the training data |
 |---|---|
-| **GP** | The mean falls back to the zero prior. The predicted acceleration is zero, so the flow lines become horizontal. The colour becomes bright, and that is a clear warning. |
-| **MLP** | It extrapolates with its last linear pieces. The flow lines look reasonable, but they disagree with the physics. There is no warning. |
+| GP | The mean falls back to the zero prior. The predicted acceleration is zero, so the flow lines become horizontal. The colour becomes bright, and that is a clear warning. |
+| MLP | It extrapolates with its last linear pieces. The flow lines look reasonable, but they disagree with the physics. There is no warning. |
 
 For a controller this is the whole difference. The GP tells you where you can trust it.
+
+| ![GP, large oscillation](images/p3_gp_phase_big.png) | ![GP, small oscillation](images/p3_gp_phase_small.png) |
+|---|---|
+| GP, large-oscillation data. The colour is dark everywhere, so the model is sure. The flow lines agree with the physics. | GP, small-oscillation data. Only a small dark area near θ₁ = −π/2 holds data. The rest is bright, and the flow lines are horizontal, because the mean falls back to zero. |
+
+![MLP, small oscillation](images/p3_mlp_phase_small.png)
+
+*The MLP on the same small-oscillation data. It gives a full vector field with no bright
+area and no warning, although it has no data on the right side. Compare it against the GP
+above.*
 
 Learned ARD lengthscales of the GP on the large-oscillation data:
 `[7.73, 7.10, 0.80, 0.86, 0.69, 0.69]` for
@@ -111,7 +124,7 @@ A GP clones a PD controller. It learns (θ₁, θ₂) → (τ₁, τ₂) from on
 controller along the ellipse. The GP then replaces the PD controller.
 
 The closed loop diverges. The reason is clear: the GP sees the angles only. It sees no
-speed and no reference. It therefore learned a torque that is correct **on** the training
+speed and no reference. It therefore learned a torque that is correct on the training
 path and nowhere else. When the robot moves away, the GP applies a torque that belongs to
 a different point of the path, and the error grows.
 
@@ -132,11 +145,11 @@ The gradient comes from automatic differentiation through the GP.
 | Controller | RMSE of the tip | Largest error |
 |---|---|---|
 | The cloned policy alone | 0.996 m | 2.08 m |
-| The same policy plus the variance term (k_var = 2.0) | **0.157 m** | 0.40 m |
+| The same policy plus the variance term (k_var = 2.0) | 0.157 m | 0.40 m |
 
-The figures `outputs/p3/3f_path_*.pdf` show it clearly. The cloned policy leaves the
-ellipse and swings out to y = −3 m. With the variance term the robot stays on the
-ellipse.
+| ![The cloned policy alone](images/p3_clone_pure.png) | ![With the variance term](images/p3_clone_repel.png) |
+|---|---|
+| The cloned policy alone. The robot leaves the ellipse and swings out to y = −3 m. | Plus the variance term. The robot stays on the ellipse. The controller is the same, and only the extra torque is new. |
 
 The controller now has a feedback to the path, although it never knows the desired
 position. The uncertainty of the model does the work.
@@ -158,8 +171,7 @@ term and no gravity compensation.
 The damping term and the variance term make the error smaller, but this controller stays
 much weaker than the controller of task 3f. The cause is the signal itself: the change of
 the angle over one time step is approximately 0.01 rad, so the torque is small against the
-gravity torque of the arm. The gains (kp = 500, kd = 2.0, k_var = 1.0) are the values that
-the original work tuned.
+gravity torque of the arm. The gains are kp = 500, kd = 2.0 and k_var = 1.0.
 
 This is the honest limit of the method. A controller that clones a path without a teacher
 and without a speed measurement gets a weak signal, and no gain makes that signal larger
@@ -182,4 +194,3 @@ negative gradient can point to the wrong one. The noise on the gradient also gro
 the number of states. The method is therefore not general. It needs data with one clear
 low-uncertainty area.
 
-The full discussion of safety is in [answers.md](answers.md).

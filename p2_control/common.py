@@ -83,8 +83,9 @@ def save_tracking_plots(
 ):
     """Write the three standard figures of a tracking run.
 
-    The plot helpers of the course make figures with a fixed name. A second call fails
-    if the first figure is still open, so each figure is closed after it is written.
+    The plot helpers of `jax_double_pendulum` make figures with a fixed name. A second
+    call fails if the first figure is still open, so each figure is closed after it is
+    written.
     """
     output_dir.mkdir(parents=True, exist_ok=True)
 

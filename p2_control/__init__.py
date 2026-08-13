@@ -15,8 +15,8 @@ import matplotlib
 jax.config.update("jax_platforms", "cpu")
 jax.config.update("jax_enable_x64", True)
 
-# The plot helpers of the course call `plt.show()`. A file backend keeps the scripts
-# non-interactive. Set MPLBACKEND to see the figures on the screen.
+# The plot helpers of `jax_double_pendulum` call `plt.show()`. A file backend keeps the
+# scripts non-interactive. Set MPLBACKEND to see the figures on the screen.
 if not os.environ.get("MPLBACKEND"):
     matplotlib.use("Agg")
     warnings.filterwarnings("ignore", message=".*non-interactive.*cannot be shown")

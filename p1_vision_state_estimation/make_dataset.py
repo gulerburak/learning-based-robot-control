@@ -2,7 +2,7 @@
 
 There are two methods:
 
-  --zip PATH   Unpack the dataset archive of the course.
+  --zip PATH   Unpack a dataset archive that you already have.
   --render     Render 3600 images with the gymnasium pendulum environment.
 
 Both methods write the files `image{i}.npz` and `label{i}.npz` into the output folder.
@@ -26,8 +26,8 @@ NUM_SAMPLES = 3600
 def extract_zip(zip_path: Path, output_dir: Path):
     """Unpack the archive into one flat folder.
 
-    The archive of the course holds a top folder. The files are written without it, so
-    that the result is the same as the result of `render_dataset`.
+    An archive can hold a top folder. The files are written without it, so that the
+    result is the same as the result of `render_dataset`.
     """
     if output_dir.is_dir():
         shutil.rmtree(output_dir)
@@ -45,7 +45,7 @@ def extract_zip(zip_path: Path, output_dir: Path):
 def render_dataset(output_dir: Path, num_samples: int = NUM_SAMPLES):
     """Render one image for each angle, at equal steps over the full circle.
 
-    The angles go from 0 to 2*pi, which is the range that the dataset of the course uses.
+    The angles go from 0 to 2*pi, which is the range that the labels use.
     """
     import gymnasium as gym
 

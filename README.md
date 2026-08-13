@@ -2,15 +2,12 @@
 
 Three projects on one 2-link robot arm. They answer three questions:
 
-1. **Where is the robot?** A convolutional network reads the joint angle from a camera
+1. Where is the robot? A convolutional network reads the joint angle from a camera
    image.
-2. **How does the robot move?** A neural network learns the physics of the robot, and a
+2. How does the robot move? A neural network learns the physics of the robot, and a
    learning controller corrects a model that is wrong.
-3. **How sure is the model?** A Gaussian process reports its own uncertainty, and a
+3. How sure is the model? A Gaussian process reports its own uncertainty, and a
    controller uses that uncertainty as a feedback signal.
-
-Every result below comes from a script in this repo. All text follows ASD-STE100
-Simplified Technical English.
 
 ---
 
@@ -18,10 +15,10 @@ Simplified Technical English.
 
 | Project | What it shows | Result |
 |---|---|---|
-| **1. Vision** | The output representation of an angle changes the accuracy more than the network size. | **0.013 rad** with sine and cosine, against **0.508 rad** with the angle. The models differ by 31 parameters. |
-| **2. Control** | A Lagrangian Neural Network learns the dynamics well enough to replace the physical model in the controller. | **0.049 m** tip error with the learned model, against 0.049 m with the true model. |
-| **2. ILC** | Iterative Learning Control removes the effect of a model error of 80 %. | **0.034 m** tip error, which is better than a PD controller with the correct model. |
-| **3. GP** | The variance of a Gaussian process makes an unstable cloned controller stable. | **0.157 m** path RMSE, against 0.996 m without the variance term. |
+| 1. Vision | The output representation of an angle changes the accuracy more than the network size. | 0.013 rad with sine and cosine, against 0.508 rad with the angle. The models differ by 31 parameters. |
+| 2. Control | A Lagrangian Neural Network learns the dynamics well enough to replace the physical model in the controller. | 0.049 m tip error with the learned model, against 0.049 m with the true model. |
+| 2. ILC | Iterative Learning Control removes the effect of a model error of 80 %. | 0.034 m tip error, which is better than a PD controller with the correct model. |
+| 3. GP | The variance of a Gaussian process makes an unstable cloned controller stable. | 0.157 m path RMSE, against 0.996 m without the variance term. |
 
 ---
 
@@ -32,17 +29,22 @@ Simplified Technical English.
 A CNN with 8000 parameters reads the angle of a pendulum from a 24x24 image. Two output
 representations are compared:
 
-* **Direct** — the network gives the angle. Error: 0.5075 ± 0.0857 rad.
-* **Indirect** — the network gives the sine and the cosine, and `atan2` gives the angle.
+* Direct — the network gives the angle. Error: 0.5075 ± 0.0857 rad.
+* Indirect — the network gives the sine and the cosine, and `atan2` gives the angle.
   Error: 0.0126 ± 0.0033 rad.
 
 The direct model must learn a function with a step where the angle wraps. Two angles that
 are 0.02 rad apart get a penalty of 6.26 rad. The sine and the cosine have no step, so the
 same network becomes 40 times more accurate.
 
-The error itself must also use the wrap of the circle. The original work took a direct
-difference, and that made its error for the sine-cosine model look five times larger than
-it is. `docs/results.md` gives the two numbers next to each other.
+The error must also wrap at the full circle. The labels go from 0 to 2π and `atan2` gives
+a value in [−π, π], so a direct difference counts a full circle for a sample at the end of
+the range.
+
+![Angle error against the true angle](docs/images/p1_error_vs_angle.png)
+
+*The error of the direct model (blue) increases to 3 rad at the two ends of the range,
+where the angle wraps. The sine-cosine model (orange) stays flat over the full circle.*
 
 ## 2. Model-based control, learned dynamics, iterative learning control
 
@@ -50,12 +52,12 @@ it is. `docs/results.md` gives the two numbers next to each other.
 
 The robot must follow an ellipse. It starts away from the path.
 
-**Classical control.** PD in the link space and in the joint space, PD with gravity
+Classical control. PD in the link space and in the joint space, PD with gravity
 compensation, PD with inverse-dynamics feedforward, and PD+ (Paden–Panja). PD+ reaches
 0.0491 m with gains that are ten times smaller than the gains of the simple PD controller,
 because its feedforward term makes the error dynamics linear.
 
-**A Lagrangian Neural Network.** Instead of the acceleration, the network learns the
+A Lagrangian Neural Network. Instead of the acceleration, the network learns the
 energy. One network gives the mass matrix through a Cholesky form, so the matrix is always
 positive definite. A second network gives the potential energy. Automatic differentiation
 of the Lagrangian gives M, C and G, and an RK4 step gives the next state. The loss goes
@@ -64,26 +66,30 @@ through all of it.
 After training on 249750 samples the learned model replaces the physical model in the
 PD+ controller. The tip error is 0.0493 m, and the true model gives 0.0491 m.
 
-**Iterative Learning Control.** The controller now uses a **wrong** model: its masses are
+Iterative Learning Control. The controller now uses a wrong model: its masses are
 too large by a factor of 1.8. The closed loop is linearized along the path with
 forward-mode automatic differentiation, discretized with a zero-order hold, and stacked
 into a lifted system of 1998 × 1998. Q-ILC then computes the learning gains from an LQR
 problem. After 1000 runs the tip error is 0.0335 m, although the model stays wrong.
 
+| ![PD+ with the learned model](docs/images/p2_lnn_control.png) | ![Q-ILC convergence](docs/images/p2_q_ilc_convergence.png) |
+|---|---|
+| The controller uses the learned dynamics. The tip follows the reference, and the error goes to zero. | Q-ILC learns against a wrong model. The error falls over the iterations. |
+
 ## 3. Gaussian processes and behavioural cloning
 
 `p3_gp_learning/` · GPyTorch · [full page](docs/03-gaussian-processes-and-cloning.md)
 
-**What a GP gives.** An exact GP and a sparse GP fit a tensile test of steel. An ARD model
+What a GP gives. An exact GP and a sparse GP fit a tensile test of steel. An ARD model
 predicts the strength of concrete and finds by itself that the age of the sample has the
 largest effect. The comparison of a constant mean against a zero mean is about safety: far
 from the data, a zero mean warns and a constant mean does not.
 
-**Where a GP is better than an MLP.** Both learn the dynamics of the robot. Where there is
+Where a GP is better than an MLP. Both learn the dynamics of the robot. Where there is
 no training data, the GP falls back to its prior and reports a large standard deviation.
 The MLP gives a confident answer that disagrees with the physics.
 
-**Uncertainty as feedback.** A GP with a periodic kernel clones a PD controller. It sees
+Uncertainty as feedback. A GP with a periodic kernel clones a PD controller. It sees
 the angles only, so the closed loop diverges. The variance of the GP is small on the
 training path and large away from it. A torque along the negative gradient of the variance
 
@@ -94,8 +100,12 @@ the term the robot leaves the ellipse and swings out to y = −3 m. With the ter
 on the ellipse. The controller gets a feedback to the path, although it never knows the
 desired position.
 
+| ![The cloned policy alone](docs/images/p3_clone_pure.png) | ![With the variance term](docs/images/p3_clone_repel.png) |
+|---|---|
+| The cloned policy alone. The robot (blue) leaves the reference (black) and swings out to y = −3 m. | Plus the variance term. The robot stays on the ellipse. Nothing else changed. |
+
 A second experiment clones the path itself, without a teacher controller. There the same
-idea helps (4.62 m to 3.30 m), but the controller stays weak. The
+idea helps (2.56 m to 2.03 m RMSE), but the controller stays weak. The
 [full page](docs/03-gaussian-processes-and-cloning.md) explains why.
 
 ---
@@ -142,7 +152,7 @@ pip install -e ".[dev]"
 python -m pytest tests/test_lnn.py
 ```
 
-The test checks the Lagrangian Neural Network against reference values of the course.
+The test checks the Lagrangian Neural Network against reference values.
 
 ---
 
@@ -154,7 +164,7 @@ The test checks the Lagrangian Neural Network against reference values of the co
 | `p2_control/` | The controllers, the Lagrangian Neural Network, the linearization, PD-ILC and Q-ILC. `tasks/` holds the runnable scripts. |
 | `p3_gp_learning/` | The GP models, the MLP, the cloned controllers. `tasks/` holds the runnable scripts. |
 | `jax_double_pendulum/` | The robot simulator. See the credit below. |
-| `docs/` | One page for each project, the recorded results, and the written answers. |
+| `docs/` | One page for each project, and the recorded results. |
 | `data/` | The small datasets. See [data/README.md](data/README.md). |
 | `tests/` | The reference test of the Lagrangian Neural Network. |
 
@@ -170,12 +180,12 @@ Tomás Coleman and Jingyue Liu. Source:
 [tud-phi/ics-pa-sv](https://github.com/tud-phi/ics-pa-sv).
 
 Some plot helpers in `p2_control/` (`ilc.py`, `ilc_analysis.py`, `lnn_analysis.py`) also
-come from the course. `docs/source-map.md` records what came from where.
+come from the course.
 
 ## A note about the course
 
 This work started as the practical assignment of RO47019 at TU Delft. The course still
-runs. **If you follow that course, do not copy this code.** You will learn nothing, and
+runs. If you follow that course, do not copy this code. You will learn nothing, and
 your school has rules against it. Read `docs/` instead, and then write your own solution.
 
 ## Licence
