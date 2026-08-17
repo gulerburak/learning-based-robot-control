@@ -17,6 +17,18 @@ FPS = 20
 DPI = 100
 TRAIL_STEPS = 400
 
+# The style of the first arm of a panel and of the second arm, if there is one. The
+# second arm is thinner and its trail is broken, so that the first arm stays visible
+# below it when the two agree.
+ARM_STYLES = (
+    {"color": "tab:blue", "alpha": 1.0, "lw": 3.5, "ms": 7},
+    {"color": "tab:red", "alpha": 0.7, "lw": 2.0, "ms": 5},
+)
+TRAIL_STYLES = (
+    {"color": "tab:orange", "ls": "-", "lw": 1.8},
+    {"color": "tab:red", "ls": "--", "lw": 1.4},
+)
+
 
 def link_positions(th_ts, rp: Dict = ROBOT_PARAMS):
     """Give the elbow position and the tip position for a series of link angles."""
@@ -37,10 +49,12 @@ def save_arm_gif(
     panel_size: float = 4.0,
     limit: float = None,
 ):
-    """Write a GIF that shows one arm for each panel.
+    """Write a GIF that shows the arm of each panel.
 
-    A panel is a dictionary with `title`, `sim_ts` and `traj_ts`. The panels get the
-    same axis limits and the same time step, so a reader can compare them directly.
+    A panel is a dictionary with `title` and `sim_ts`. It can also hold `traj_ts` for
+    the reference path, `sim_hat_ts` for a second arm in the same axes, and `labels`
+    for the names of the two arms. The panels get the same axis limits and the same
+    time step, so a reader can compare them directly.
     """
     filepath = Path(filepath)
     filepath.parent.mkdir(parents=True, exist_ok=True)
@@ -57,13 +71,39 @@ def save_arm_gif(
     updates: List = []
 
     for ax, panel in zip(axes, panels):
-        elbow, tip = link_positions(panel["sim_ts"]["th_ts"], rp)
-        reference = np.asarray(panel["traj_ts"]["x_ts"])
+        labels = panel.get("labels", ("robot", "second model"))
+        two_arms = panel.get("sim_hat_ts") is not None
+        traj_ts = panel.get("traj_ts")
+        reference = None if traj_ts is None else np.asarray(traj_ts["x_ts"])
+        target = None
 
-        ax.plot(reference[:, 0], reference[:, 1], "k--", lw=1.0, label="reference")
-        (target,) = ax.plot([], [], "o", ms=6, mfc="none", mec="k", label="target now")
-        (trail,) = ax.plot([], [], "-", lw=1.6, color="tab:orange", label="tip")
-        (arm,) = ax.plot([], [], "o-", lw=3.5, ms=7, color="tab:blue")
+        if reference is not None:
+            ax.plot(reference[:, 0], reference[:, 1], "k--", lw=1.0, label="reference")
+            (target,) = ax.plot(
+                [], [], "o", ms=6, mfc="none", mec="k", label="target now"
+            )
+
+        arms = []
+        for index, key in enumerate(("sim_ts", "sim_hat_ts")):
+            if panel.get(key) is None:
+                continue
+            elbow, tip = link_positions(panel[key]["th_ts"], rp)
+            (trail,) = ax.plot(
+                [],
+                [],
+                alpha=0.9,
+                label=None if two_arms else "tip",
+                **TRAIL_STYLES[index],
+            )
+            (arm,) = ax.plot(
+                [],
+                [],
+                marker="o",
+                label=labels[index] if two_arms else None,
+                **ARM_STYLES[index],
+            )
+            arms.append((elbow, tip, arm, trail))
+
         clock = ax.text(0.04, 0.94, "", transform=ax.transAxes, fontsize=9)
 
         ax.set_xlim(-reach, reach)
@@ -72,21 +112,23 @@ def save_arm_gif(
         ax.set_title(panel["title"], fontsize=11)
         ax.set_xlabel("x [m]")
         ax.grid(True, alpha=0.25)
-        updates.append((elbow, tip, reference, target, trail, arm, clock))
+        updates.append((arms, reference, target, clock))
 
     axes[0].set_ylabel("y [m]")
     axes[0].legend(loc="lower right", fontsize=8)
     fig.tight_layout()
 
     def draw(step: int):
-        for elbow, tip, reference, target, trail, arm, clock in updates:
-            arm.set_data(
-                [0.0, elbow[step, 0], tip[step, 0]],
-                [0.0, elbow[step, 1], tip[step, 1]],
-            )
-            start = max(0, step - trail_steps)
-            trail.set_data(tip[start : step + 1, 0], tip[start : step + 1, 1])
-            target.set_data([reference[step, 0]], [reference[step, 1]])
+        start = max(0, step - trail_steps)
+        for arms, reference, target, clock in updates:
+            for elbow, tip, arm, trail in arms:
+                arm.set_data(
+                    [0.0, elbow[step, 0], tip[step, 0]],
+                    [0.0, elbow[step, 1], tip[step, 1]],
+                )
+                trail.set_data(tip[start : step + 1, 0], tip[start : step + 1, 1])
+            if target is not None:
+                target.set_data([reference[step, 0]], [reference[step, 1]])
             clock.set_text(f"t = {time_ts[step]:.2f} s")
 
     animation = FuncAnimation(fig, draw, frames=frames, interval=1000 / fps)

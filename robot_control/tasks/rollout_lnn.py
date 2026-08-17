@@ -7,6 +7,7 @@ time. A model that does not keep the energy diverges quickly.
 Run `python -m robot_control.tasks.train_lnn` first.
 
     python -m robot_control.tasks.rollout_lnn
+    python -m robot_control.tasks.rollout_lnn --gif    # also write the animation
 """
 
 import argparse
@@ -17,6 +18,7 @@ from jax import numpy as jnp
 
 from jax_double_pendulum.robot_parameters import ROBOT_PARAMS
 from jax_double_pendulum.robot_simulation import simulate_robot
+from robot_control.animation import save_arm_gif
 from robot_control.common import (
     CHECKPOINT_DIR,
     OUTPUT_DIR,
@@ -36,7 +38,7 @@ def load_nn_params(filepath=None):
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--duration", type=float, default=10.0)
-    parser.add_argument("--animate", action="store_true")
+    parser.add_argument("--gif", action="store_true", help="also write an animation")
     args = parser.parse_args()
 
     nn_params = load_nn_params()
@@ -60,19 +62,24 @@ def main():
         discrete_forward_dynamics_fn=learned_fn,
     )
 
-    report_tracking_error(nominal_sim_ts, learned_sim_ts, "Learned dynamics rollout")
+    rmse = report_tracking_error(
+        nominal_sim_ts, learned_sim_ts, "Learned dynamics rollout"
+    )
 
-    if args.animate:
-        from jax_double_pendulum.visualization import animate_robot
-
-        OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
-        animate_robot(
-            ROBOT_PARAMS,
-            sim_ts=nominal_sim_ts,
-            sim_hat_ts=learned_sim_ts,
+    if args.gif:
+        panel = {
+            "title": f"Free rollout over {args.duration:.0f} s\n"
+            f"RMSE of the tip {rmse:.4f} m",
+            "sim_ts": nominal_sim_ts,
+            "sim_hat_ts": learned_sim_ts,
+            "labels": ("true model", "learned model"),
+        }
+        save_arm_gif(
+            [panel],
+            OUTPUT_DIR / "lnn_rollout.gif",
             step_skip=5,
-            show=False,
-            filepath=str(OUTPUT_DIR / "rollout_learned_dynamics.mp4"),
+            trail_steps=100,
+            panel_size=5.0,
         )
 
 
