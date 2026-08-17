@@ -25,7 +25,7 @@ The sparse model cannot follow the sharp yield point with 10 points. It therefor
 the function smoother and calls the difference "noise". This is the cost of the
 approximation, and the model reports it.
 
-| ![Exact GP](images/p3_exact_gp.png) | ![Sparse GP](images/p3_sparse_gp.png) |
+| ![Exact GP](images/gp_exact.png) | ![Sparse GP](images/gp_sparse.png) |
 |---|---|
 | Exact GP. It follows the yield point, and the confidence band is thin. | Sparse GP, 10 inducing points (black crosses). The curve is smoother and the band is wider. |
 
@@ -90,11 +90,11 @@ With the small-oscillation data they do not:
 
 For a controller this is the whole difference. The GP tells you where you can trust it.
 
-| ![GP, large oscillation](images/p3_gp_phase_big.png) | ![GP, small oscillation](images/p3_gp_phase_small.png) |
+| ![GP, large oscillation](images/gp_phase_big.png) | ![GP, small oscillation](images/gp_phase_small.png) |
 |---|---|
 | GP, large-oscillation data. The colour is dark everywhere, so the model is sure. The flow lines agree with the physics. | GP, small-oscillation data. Only a small dark area near θ₁ = −π/2 holds data. The rest is bright, and the flow lines are horizontal, because the mean falls back to zero. |
 
-![MLP, small oscillation](images/p3_mlp_phase_small.png)
+![MLP, small oscillation](images/mlp_phase_small.png)
 
 *The MLP on the same small-oscillation data. It gives a full vector field with no bright
 area and no warning, although it has no data on the right side. Compare it against the GP
@@ -142,12 +142,25 @@ variance:
 
 The gradient comes from automatic differentiation through the GP.
 
+![The uncertainty of the GP over the angle plane](images/clone_uncertainty_map.png)
+
+*The colour is the standard deviation of the cloned torque over the plane of the two
+angles. The red points are the training data, and they lie on one closed path. The white
+arrows give the direction of the extra torque, which is the negative gradient of the
+variance. The arrows point to the path from every side. The kernel is periodic, so the
+path repeats above and below the range. The arrows near the top edge point to that copy.*
+
 | Controller | RMSE of the tip | Largest error |
 |---|---|---|
 | The cloned policy alone | 0.996 m | 2.08 m |
 | The same policy plus the variance term (k_var = 2.0) | 0.157 m | 0.40 m |
 
-| ![The cloned policy alone](images/p3_clone_pure.png) | ![With the variance term](images/p3_clone_repel.png) |
+![The two runs of the cloned controller](images/clone_comparison.gif)
+
+*The same controller, twice. On the left it has the mean of the process only. On the right
+it also has the variance term, and nothing else changed.*
+
+| ![The cloned policy alone](images/clone_pure.png) | ![With the variance term](images/clone_repel.png) |
 |---|---|
 | The cloned policy alone. The robot leaves the ellipse and swings out to y = −3 m. | Plus the variance term. The robot stays on the ellipse. The controller is the same, and only the extra torque is new. |
 
@@ -180,6 +193,7 @@ without noise.
 
 ```bash
 python -m gp_learning.tasks.clone_torques
+python -m gp_learning.tasks.clone_torques --gif    # with the animation
 python -m gp_learning.tasks.clone_reference
 ```
 

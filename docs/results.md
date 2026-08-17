@@ -45,16 +45,20 @@ circle for a sample at the end of the range, although the two angles are almost 
 
 ### Classical controllers
 
-| Controller | Gains | RMSE x [m] |
-|---|---|---|
-| PD on link angles | kp = 5000·I, kd = 500·I | 0.0635 |
-| PD on joint angles | kp = 5000·I, kd = 500·I | 0.0501 |
-| PD + gravity compensation | kp = 5000·I, kd = 500·I | 0.0269 |
-| PD + feedforward | kp = 5000·I, kd = 50·I | 0.0619 |
-| PD+ (Paden–Panja) | kp = 500·I, kd = 50·I | 0.0491 |
+| Controller | Gains | RMSE x [m] | Mean feedback torque [N·m] |
+|---|---|---|---|
+| PD on link angles | kp = 5000·I, kd = 500·I | 0.0635 | 131.6 |
+| PD on joint angles | kp = 5000·I, kd = 500·I | 0.0501 | 130.3 |
+| PD + gravity compensation | kp = 5000·I, kd = 500·I | 0.0269 | 29.1 |
+| PD + feedforward | kp = 5000·I, kd = 50·I | 0.0619 | 106.1 |
+| PD+ (Paden–Panja) | kp = 500·I, kd = 50·I | 0.0491 | 6.3 |
 
 The initial state has an error of [0.1, 0.2] rad against the first point of the path, so
 the feedback term must do work.
+
+The last column is the mean of the norm of the feedback torque over the run. It shows
+what the feedforward term is worth: PD+ holds almost the same error as the plain PD
+controller with 5 % of the feedback effort. `compare_controllers` gives this table.
 
 ### Lagrangian Neural Network
 

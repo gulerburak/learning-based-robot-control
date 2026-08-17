@@ -54,6 +54,13 @@ Both models train for 50 epochs with SGD, in three runs with different seeds.
 
 31 more parameters make the model 40 times more accurate.
 
+![The angle that each model reads from the image](images/vision_predictions.gif)
+
+*The link turns over the full circle. The image at the left is the input of the network:
+24x24 pixels and one channel. The green needle is the true angle, the blue needle is the
+direct model, and the orange needle is the sine-cosine model. The bars give the error of
+that image.*
+
 ## Why the difference is so large
 
 The angle wraps at the full circle. Two angles that are near to each other, for example
@@ -71,13 +78,19 @@ give the same output.
 The figure shows the effect directly. The error of the direct model is largest at the two
 ends of the range, where the angle wraps.
 
-![Angle error against the true angle](images/p1_error_vs_angle.png)
+![Eight test images with the true angle and the two predictions](images/vision_predictions.png)
+
+*Eight samples of the test set, at equal steps over the circle. The needle of the direct
+model (blue) leaves the link at the two ends of the range. The needle of the sine-cosine
+model (orange) stays on it.*
+
+![Angle error against the true angle](images/vision_error_vs_angle.png)
 
 *The blue points are the direct model. Its error increases to 3 rad near θ = 0 and
 θ = 2π, which is the same point on the circle. The orange points are the sine-cosine
 model. Its error stays near 0.01 rad everywhere.*
 
-![Training loss and validation error](images/p1_loss_curves.png)
+![Training loss and validation error](images/vision_loss_curves.png)
 
 *Left: the training loss of the six runs. The two models work on different output spaces,
 so the size of their losses is not comparable. Right: the validation error in rad, which
@@ -93,6 +106,9 @@ python -m vision_state_estimation.make_dataset --render
 
 # Train both models
 python -m vision_state_estimation.run --model both --epochs 50 --runs 3
+
+# The same, with the animation of the predictions
+python -m vision_state_estimation.run --model both --epochs 50 --runs 3 --gif
 ```
 
 The script writes the loss curves and the error-against-angle figure into `outputs/vision/`.

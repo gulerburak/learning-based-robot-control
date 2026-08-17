@@ -12,28 +12,35 @@ good model of the robot?
 
 ## Step 1 — Control with a good model
 
-| Controller | Feedforward term | RMSE of the tip |
-|---|---|---|
-| PD on the link angles | none | 0.0635 m |
-| PD on the joint angles | none | 0.0501 m |
-| PD + gravity compensation | G(θ) | 0.0269 m |
-| PD + inverse dynamics | M(θᵈ)θ̈ᵈ + C(θᵈ,θ̇ᵈ)θ̇ᵈ + G(θᵈ) | 0.0619 m |
-| PD+ (Paden–Panja) | M(θ)θ̈ᵈ + C(θ,θ̇)θ̇ᵈ + G(θ) | 0.0491 m |
+| Controller | Feedforward term | RMSE of the tip | Mean feedback torque |
+|---|---|---|---|
+| PD on the link angles | none | 0.0635 m | 131.6 N·m |
+| PD on the joint angles | none | 0.0501 m | 130.3 N·m |
+| PD + gravity compensation | G(θ) | 0.0269 m | 29.1 N·m |
+| PD + inverse dynamics | M(θᵈ)θ̈ᵈ + C(θᵈ,θ̇ᵈ)θ̇ᵈ + G(θᵈ) | 0.0619 m | 106.1 N·m |
+| PD+ (Paden–Panja) | M(θ)θ̈ᵈ + C(θ,θ̇)θ̇ᵈ + G(θ) | 0.0491 m | 6.3 N·m |
 
 Two results are worth attention.
 
 The joint-space PD controller is better than the link-space PD controller, although the
 gains are the same. The torque acts on the joints, so the error must be measured there.
 
-The PD+ controller reaches 0.0491 m with gains that are ten times smaller than the
-gains of the simple PD controller (500 against 5000). The feedforward term makes the
-error dynamics linear, so the feedback term has little work to do. A small gain means a
-soft robot, and a soft robot is safer near a person.
+The PD+ controller reaches 0.0491 m with gains that are ten times smaller than the gains
+of the simple PD controller (500 against 5000). The feedforward term makes the error
+dynamics linear, so the feedback term has little work to do: it uses 6.3 N·m on average,
+against 131.6 N·m for the plain PD controller. A small gain means a soft robot, and a soft
+robot is safer near a person.
+
+![Accuracy and effort of the five controllers](images/controller_comparison.png)
+
+*Left: the tracking error of each controller. Right: the norm of the feedback torque
+against the time. The accuracy of the five controllers is similar, and the effort is not.*
 
 ```bash
 python -m robot_control.tasks.pd_control
 python -m robot_control.tasks.pd_gravity_compensation
 python -m robot_control.tasks.pd_plus
+python -m robot_control.tasks.compare_controllers
 ```
 
 ---
@@ -75,12 +82,12 @@ Result: the validation loss falls to 2.44e-07. Then:
 The controller with the learned model is as good as the controller with the true model
 (0.0491 m). The network learned the physics, not only a fit of the data.
 
-![Training of the Lagrangian Neural Network](images/p2_lnn_convergence.png)
+![Training of the Lagrangian Neural Network](images/lnn_convergence.png)
 
 *The loss falls over four orders of magnitude. The validation loss follows the training
 loss, so the network does not memorise the data.*
 
-![PD+ control with the learned dynamics](images/p2_lnn_control.png)
+![PD+ control with the learned dynamics](images/lnn_control.png)
 
 *The tip position and speed against the reference, with the learned M, C and G in the
 feedforward term. The lower row shows the error. It starts at the deliberate offset and
@@ -130,7 +137,13 @@ by the same factor, nothing changes.
 The result is the important part: the model of the controller stays wrong, but the tip
 error falls to 0.0335 m. That is better than the PD controller with the correct model.
 
-![Q-ILC convergence](images/p2_q_ilc_convergence.png)
+![Q-ILC learns against a wrong model](images/q_ilc_learning.gif)
+
+*Each frame is one run of the robot. The grey line is the first run, where the wrong model
+holds the tip away from the ellipse. The torque of the next run comes from the error of
+the last run. The right side gives the RMSE against the iteration.*
+
+![Q-ILC convergence](images/q_ilc_convergence.png)
 
 *The error of the two link angles against the iteration. The controller repeats the same
 path, and each run makes the torque of the next run better. After approximately 600 runs
@@ -140,6 +153,7 @@ the error stops to decrease.*
 python -m robot_control.tasks.linearize
 python -m robot_control.tasks.pd_ilc     # approximately 3 minutes
 python -m robot_control.tasks.q_ilc      # approximately 10 minutes, P goes into a cache
+python -m robot_control.tasks.q_ilc --gif    # the same run, with the animation
 ```
 
 ---
