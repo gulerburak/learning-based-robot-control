@@ -82,6 +82,12 @@ Result: the validation loss falls to 2.44e-07. Then:
 The controller with the learned model is as good as the controller with the true model
 (0.0491 m). The network learned the physics, not only a fit of the data.
 
+![Free rollout of the learned dynamics](images/lnn_rollout.gif)
+
+*The free motion of the arm over 10 s. The blue arm uses the true model and the red arm
+uses the learned model. Both start at rest and get no torque. The loss trains one step of
+0.01 s only, and the network holds the motion for 1000 steps.*
+
 ![Training of the Lagrangian Neural Network](images/lnn_convergence.png)
 
 *The loss falls over four orders of magnitude. The validation loss follows the training
@@ -96,7 +102,7 @@ goes to zero.*
 ```bash
 python -m robot_control.tasks.collect_dataset   # approximately 5 minutes
 python -m robot_control.tasks.train_lnn         # approximately 1 hour on a CPU
-python -m robot_control.tasks.rollout_lnn
+python -m robot_control.tasks.rollout_lnn --gif  # the animation above
 python -m robot_control.tasks.control_with_lnn
 ```
 

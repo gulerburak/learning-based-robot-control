@@ -86,13 +86,16 @@ positive definite. A second network gives the potential energy. Automatic differ
 of the Lagrangian gives M, C and G, and an RK4 step gives the next state. The loss goes
 through all of it.
 
-After training on 249750 samples the learned model replaces the physical model in the
-PD+ controller. The tip error is 0.0493 m, and the true model gives 0.0491 m.
+After training on 249750 samples the network simulates the free motion of the arm for
+10 s. The tip stays 0.0392 m away from the true motion, although a double pendulum makes
+a small error grow quickly. The learned model then replaces the physical model in the PD+
+controller, and the tip error is 0.0493 m against 0.0491 m with the true model.
 
-![PD+ control with the learned model](docs/images/lnn_control.png)
+![Free rollout of the learned dynamics](docs/images/lnn_rollout.gif)
 
-*The controller uses the learned dynamics in its feedforward term. The tip follows the
-reference, and the error goes to zero.*
+*The blue arm is the true model and the red arm is the learned model. Both start at rest
+and get no torque. The network was trained on single steps only, and it holds the motion
+for 10 s.*
 
 Iterative Learning Control. The controller now uses a wrong model: its masses are
 too large by a factor of 1.8. The closed loop is linearized along the path with
@@ -176,10 +179,11 @@ python -m robot_control.tasks.q_ilc             # approximately 10 minutes
 ```
 
 All scripts have an `argparse` interface. Use `--help`. The figures go into `outputs/`.
-Four tasks can also animate their result:
+Five tasks can also animate their result:
 
 ```bash
 python -m robot_control.tasks.compare_controllers --gif
+python -m robot_control.tasks.rollout_lnn --gif
 python -m robot_control.tasks.q_ilc --gif
 python -m gp_learning.tasks.clone_torques --gif
 python -m vision_state_estimation.run --gif

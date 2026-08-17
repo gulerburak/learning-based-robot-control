@@ -77,9 +77,10 @@ def main():
         save_arm_gif(
             [panel],
             OUTPUT_DIR / "lnn_rollout.gif",
-            step_skip=5,
+            step_skip=6,
             trail_steps=100,
             panel_size=5.0,
+            dpi=90,
         )
 
 
