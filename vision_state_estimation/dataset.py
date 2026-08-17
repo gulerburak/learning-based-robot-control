@@ -62,9 +62,13 @@ class PendulumImageDataset(Dataset):
     def __len__(self) -> int:
         return self.num_samples
 
+    def angle(self, index: int) -> float:
+        """Give the label of one sample, without the image."""
+        return float(np.load(self.data_dir / f"label{index}.npz")["arr_0"])
+
     def __getitem__(self, index: int) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
         image = np.load(self.data_dir / f"image{index}.npz")["arr_0"]
-        theta = float(np.load(self.data_dir / f"label{index}.npz")["arr_0"])
+        theta = self.angle(index)
 
         x = self.transform(image)
         trig = torch.FloatTensor([np.sin(theta), np.cos(theta)])

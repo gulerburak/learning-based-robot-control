@@ -6,6 +6,7 @@ from typing import Dict, List, Tuple
 import matplotlib.pyplot as plt
 import numpy as np
 import torch
+from matplotlib.animation import FuncAnimation, PillowWriter
 from torch import nn
 from torch.utils.data import DataLoader
 from tqdm import tqdm
@@ -16,6 +17,9 @@ LOSS_FN = nn.MSELoss(reduction="mean")
 
 LEARNING_RATES = {"theta": 1e-3, "trig": 1e-2}
 MODELS = {"theta": CNNTheta, "trig": CNNTrig}
+MODEL_LABELS = {"theta": "direct angle", "trig": "sine and cosine"}
+MODEL_COLORS = {"theta": "tab:blue", "trig": "tab:orange"}
+TRUE_COLOR = "limegreen"
 
 
 def manual_seed(seed: int):
@@ -167,6 +171,175 @@ def plot_loss_curves(
     plt.close(fig)
 
 
+def _draw_needle(ax, angle: float, size: int, color: str, label: str = None, lw=2.2):
+    """Draw a line from the pivot in the direction of the angle.
+
+    The angle is zero when the link points up and it increases counterclockwise. The row
+    index of an image grows downwards, so both components get a minus sign.
+    """
+    centre = (size - 1) / 2
+    length = 0.45 * size
+    (line,) = ax.plot(
+        [centre, centre - length * np.sin(angle)],
+        [centre, centre - length * np.cos(angle)],
+        color=color,
+        lw=lw,
+        label=label,
+    )
+    return line
+
+
+def _samples_over_the_circle(test_loader: DataLoader, count: int) -> np.ndarray:
+    """Give indices of the test set, spread over the full circle."""
+    subset = test_loader.dataset
+    indices = np.asarray(subset.indices)
+    angles = np.asarray([subset.dataset.angle(index) for index in indices])
+    order = np.argsort(angles)
+    picks = np.round(np.linspace(0, len(order) - 1, count)).astype(int)
+    return indices[order[picks]]
+
+
+@torch.no_grad()
+def _predict_from_image(
+    models: Dict[str, nn.Module], x: torch.Tensor
+) -> Dict[str, float]:
+    batch = x.unsqueeze(0)
+    return {
+        model_type: float(_predict_angle(model(batch), model_type)[0])
+        for model_type, model in models.items()
+    }
+
+
+def _absolute_error(predicted: float, target: float) -> float:
+    return float(angular_error(torch.tensor(predicted), torch.tensor(target)))
+
+
+@torch.no_grad()
+def plot_predictions(
+    models: Dict[str, nn.Module],
+    test_loader: DataLoader,
+    filepath: Path,
+    count: int = 8,
+):
+    """Show the input of the network and the angle that each model reads from it."""
+    dataset = test_loader.dataset.dataset
+    indices = _samples_over_the_circle(test_loader, count)
+
+    fig, axes = plt.subplots(1, count, figsize=(1.7 * count, 2.9))
+    for ax, index in zip(axes, indices):
+        x, theta, _ = dataset[index]
+        angle = float(theta)
+        predicted = _predict_from_image(models, x)
+        size = x.shape[-1]
+
+        ax.imshow(x[0].numpy(), cmap="gray")
+        _draw_needle(ax, angle, size, TRUE_COLOR, label="true")
+        for model_type, angle_hat in predicted.items():
+            _draw_needle(
+                ax,
+                angle_hat,
+                size,
+                MODEL_COLORS[model_type],
+                label=MODEL_LABELS[model_type],
+                lw=1.6,
+            )
+
+        errors = "\n".join(
+            f"{MODEL_LABELS[m]}: {_absolute_error(a, angle):.2f} rad"
+            for m, a in predicted.items()
+        )
+        ax.set_title(f"true {angle:.2f} rad", fontsize=9)
+        ax.set_xlabel(errors, fontsize=7)
+        ax.set_xticks([])
+        ax.set_yticks([])
+
+    axes[0].legend(fontsize=7, loc="upper left", framealpha=0.7)
+    fig.suptitle("The 24x24 input, the true angle, and the angle that each model reads")
+    fig.tight_layout()
+    fig.savefig(filepath, dpi=140)
+    plt.close(fig)
+    print(f"Wrote {filepath}.")
+
+
+@torch.no_grad()
+def save_prediction_gif(
+    models: Dict[str, nn.Module],
+    test_loader: DataLoader,
+    filepath: Path,
+    count: int = 90,
+    fps: int = 12,
+):
+    """Write a GIF that turns the link over the full circle.
+
+    The needle of the direct model leaves the link where the angle wraps. The needle of
+    the sine-cosine model stays on it.
+    """
+    dataset = test_loader.dataset.dataset
+    samples = []
+    for index in _samples_over_the_circle(test_loader, count):
+        x, theta, _ = dataset[index]
+        samples.append((x, float(theta), _predict_from_image(models, x)))
+
+    model_types = list(models.keys())
+    size = samples[0][0].shape[-1]
+    centre, length = (size - 1) / 2, 0.45 * size
+
+    fig, axes = plt.subplots(1, 2, figsize=(7.6, 3.8), dpi=80)
+    picture = axes[0].imshow(samples[0][0][0].numpy(), cmap="gray", vmin=0.0, vmax=1.0)
+    needles = {"true": _draw_needle(axes[0], 0.0, size, TRUE_COLOR, label="true")}
+    for model_type in model_types:
+        needles[model_type] = _draw_needle(
+            axes[0],
+            0.0,
+            size,
+            MODEL_COLORS[model_type],
+            label=MODEL_LABELS[model_type],
+            lw=1.8,
+        )
+    axes[0].set_xticks([])
+    axes[0].set_yticks([])
+    axes[0].legend(fontsize=7, loc="upper left", framealpha=0.7)
+    # The placeholder holds the room for the title, so `tight_layout` keeps it visible.
+    title = axes[0].set_title("True angle 0.00 rad")
+
+    positions = np.arange(len(model_types))
+    bars = axes[1].barh(
+        positions,
+        np.zeros(len(model_types)),
+        color=[MODEL_COLORS[m] for m in model_types],
+    )
+    texts = [axes[1].text(0.0, p, "", va="center", fontsize=9) for p in positions]
+    axes[1].set_yticks(positions, [MODEL_LABELS[m] for m in model_types])
+    axes[1].set_xlim(0.0, np.pi)
+    axes[1].invert_yaxis()
+    axes[1].set_xlabel("Absolute angle error [rad]")
+    axes[1].set_title("Error of this image")
+    axes[1].grid(True, axis="x", alpha=0.25)
+    fig.tight_layout()
+
+    def draw(frame: int):
+        x, angle, predicted = samples[frame]
+        picture.set_data(x[0].numpy())
+        title.set_text(f"True angle {angle:.2f} rad")
+
+        for name, value in [("true", angle)] + [(m, predicted[m]) for m in model_types]:
+            needles[name].set_data(
+                [centre, centre - length * np.sin(value)],
+                [centre, centre - length * np.cos(value)],
+            )
+
+        for bar, text, model_type in zip(bars, texts, model_types):
+            error = _absolute_error(predicted[model_type], angle)
+            bar.set_width(error)
+            text.set_position((error + 0.06, text.get_position()[1]))
+            text.set_text(f"{error:.2f} rad")
+
+    animation = FuncAnimation(fig, draw, frames=len(samples), interval=1000 / fps)
+    animation.save(filepath, writer=PillowWriter(fps=fps))
+    plt.close(fig)
+    print(f"Wrote {filepath}.")
+
+
 @torch.no_grad()
 def plot_error_against_angle(
     models: Dict[str, nn.Module], test_loader: DataLoader, filepath: Path
@@ -187,7 +360,12 @@ def plot_error_against_angle(
             angles.append(angle.numpy())
             errors.append(angular_error(angle_hat, angle).numpy())
         ax.scatter(
-            np.concatenate(angles), np.concatenate(errors), s=4, alpha=0.4, label=model_type
+            np.concatenate(angles),
+            np.concatenate(errors),
+            s=4,
+            alpha=0.4,
+            color=MODEL_COLORS[model_type],
+            label=MODEL_LABELS[model_type],
         )
 
     ax.set_xlabel(r"True angle $\theta$ [rad]")

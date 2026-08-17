@@ -7,6 +7,7 @@ The lifted matrix P has a size of 1998 x 1998 and needs some minutes. The script
 it into a cache file and reads it again in the next run.
 
     python -m robot_control.tasks.q_ilc
+    python -m robot_control.tasks.q_ilc --gif                             # with animation
     python -m robot_control.tasks.q_ilc --iterations 20 --duration 2.0    # a quick check
 """
 
@@ -16,6 +17,7 @@ from jax import numpy as jnp
 
 from jax_double_pendulum.robot_parameters import ROBOT_PARAMS
 from jax_double_pendulum.robot_simulation import simulate_robot
+from robot_control.animation import save_ilc_gif
 from robot_control.common import (
     CACHE_DIR,
     OUTPUT_DIR,
@@ -70,6 +72,7 @@ def main():
     parser.add_argument("--s-weight", type=float, default=S_WEIGHT)
     parser.add_argument("--perturbation", type=float, default=PERTURBATION_FACTOR)
     parser.add_argument("--no-cache", action="store_true")
+    parser.add_argument("--gif", action="store_true", help="also write an animation")
     args = parser.parse_args()
 
     kp_fb, kd_fb = KP_FB * jnp.eye(2), KD_FB * jnp.eye(2)
@@ -127,6 +130,9 @@ def main():
     plot_configuration_space_ilc_convergence(
         traj_ts, ilc_its, filepath=str(OUTPUT_DIR / "q_ilc_convergence.pdf")
     )
+
+    if args.gif:
+        save_ilc_gif(traj_ts, ilc_its, OUTPUT_DIR / "q_ilc_learning.gif")
 
 
 if __name__ == "__main__":

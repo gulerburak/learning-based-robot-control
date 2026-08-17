@@ -16,6 +16,7 @@ learned period must come out near 6.283.
 Run `python -m gp_learning.tasks.make_robot_datasets` first.
 
     python -m gp_learning.tasks.clone_torques
+    python -m gp_learning.tasks.clone_torques --gif    # also write the animation
 """
 
 import argparse
@@ -34,6 +35,7 @@ from jax_double_pendulum.motion_planning import (
 )
 from jax_double_pendulum.robot_parameters import ROBOT_PARAMS
 from jax_double_pendulum.robot_simulation import simulate_robot
+from robot_control.animation import save_arm_gif
 from robot_control.controllers import ctrl_ff_gravity_compensation
 from gp_learning.cloning import make_torque_cloning_controller
 from gp_learning.data_utils import (
@@ -58,7 +60,7 @@ SIM_DURATION = 6.0
 GRID_SIZE = 100
 
 
-def train_controller(num_epochs: int) -> MultitaskGPRegressor:
+def train_controller(num_epochs: int):
     df = pd.read_csv(DATA_DIR / f"{DATASET}.csv")
     X, Y = generate_training_data(df, INPUT_COLUMNS, OUTPUT_COLUMNS)
     plot_data(
@@ -72,7 +74,7 @@ def train_controller(num_epochs: int) -> MultitaskGPRegressor:
 
     period = model.gp.covar_module.base_kernel.period_length
     print(f"Learned period of the kernel: {period.item():.4f} rad (2*pi = 6.2832)")
-    return model
+    return model, X
 
 
 def plot_policy_surfaces(model: MultitaskGPRegressor):
@@ -109,6 +111,53 @@ def plot_policy_surfaces(model: MultitaskGPRegressor):
         plt.close(fig)
 
 
+def plot_uncertainty_map(model: MultitaskGPRegressor, X, filepath):
+    """Draw the uncertainty over the angle plane, with the extra torque.
+
+    The training data lies on one closed path, so the variance has one valley. The
+    negative gradient of the variance points to that path from every side. This is the
+    map that the controller follows.
+    """
+    angle_range = np.linspace(-np.pi, np.pi, GRID_SIZE)
+    th1_grid, th2_grid = np.meshgrid(angle_range, angle_range)
+    X_test = torch.tensor(
+        np.column_stack((th1_grid.flatten(), th2_grid.flatten())), dtype=torch.float32
+    )
+
+    with torch.no_grad():
+        stddev = model.predict(X_test).stddev.numpy()
+    sigma = stddev.mean(axis=1).reshape(GRID_SIZE, GRID_SIZE)
+
+    gradient_th2, gradient_th1 = np.gradient(sigma**2, angle_range, angle_range)
+    step = 7
+    u, v = -gradient_th1[::step, ::step], -gradient_th2[::step, ::step]
+    length = np.hypot(u, v) + 1e-12
+
+    fig, ax = plt.subplots(figsize=(6.4, 5.4))
+    field = ax.contourf(th1_grid, th2_grid, sigma, levels=30, cmap="viridis")
+    fig.colorbar(field, ax=ax, label=r"$\sigma$ of the cloned torque [Nm]")
+    ax.quiver(
+        th1_grid[::step, ::step],
+        th2_grid[::step, ::step],
+        u / length,
+        v / length,
+        color="white",
+        alpha=0.75,
+        width=0.004,
+    )
+    training = np.asarray(X)
+    ax.plot(training[:, 0], training[:, 1], "r.", ms=1.5, label="training path")
+
+    ax.set_xlabel(r"$\theta_1$ [rad]")
+    ax.set_ylabel(r"$\theta_{\mathrm{rel},2}$ [rad]")
+    ax.set_title("The uncertainty of the GP, and the direction of the extra torque")
+    ax.legend(loc="upper right", fontsize=9)
+    fig.tight_layout()
+    fig.savefig(filepath, dpi=140)
+    plt.close(fig)
+    print(f"Wrote {filepath}.")
+
+
 def run_closed_loop(model: MultitaskGPRegressor, k_var: float, name: str):
     """Simulate the robot with the cloned controller."""
     t_ts = SIM_DT * jnp.arange(int(SIM_DURATION / SIM_DT))
@@ -129,9 +178,9 @@ def run_closed_loop(model: MultitaskGPRegressor, k_var: float, name: str):
         jit_compile=False,
     )
 
-    report_path_error(traj_ts, sim_ts, name)
+    rmse = report_path_error(traj_ts, sim_ts, name)
     plot_path(traj_ts, sim_ts, name, OUTPUT_DIR / f"clone_torque_path_{name}.pdf")
-    return sim_ts
+    return sim_ts, traj_ts, rmse
 
 
 def report_path_error(traj_ts, sim_ts, name: str) -> float:
@@ -165,15 +214,40 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--epochs", type=int, default=NUM_EPOCHS)
     parser.add_argument("--k-var", type=float, default=K_VAR)
+    parser.add_argument("--gif", action="store_true", help="also write an animation")
     args = parser.parse_args()
 
     OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
 
-    model = train_controller(args.epochs)
+    model, X = train_controller(args.epochs)
     plot_policy_surfaces(model)
+    plot_uncertainty_map(model, X, OUTPUT_DIR / "clone_torque_uncertainty_map.png")
 
-    run_closed_loop(model, k_var=0.0, name="cloned_policy")
-    run_closed_loop(model, k_var=args.k_var, name="with_variance_repulsion")
+    pure_ts, traj_ts, pure_rmse = run_closed_loop(
+        model, k_var=0.0, name="cloned_policy"
+    )
+    repel_ts, _, repel_rmse = run_closed_loop(
+        model, k_var=args.k_var, name="with_variance_repulsion"
+    )
+
+    if args.gif:
+        save_arm_gif(
+            [
+                {
+                    "title": f"Cloned policy\nRMSE {pure_rmse:.3f} m",
+                    "sim_ts": pure_ts,
+                    "traj_ts": traj_ts,
+                },
+                {
+                    "title": f"Cloned policy + uncertainty feedback\n"
+                    f"RMSE {repel_rmse:.3f} m",
+                    "sim_ts": repel_ts,
+                    "traj_ts": traj_ts,
+                },
+            ],
+            OUTPUT_DIR / "clone_torque_comparison.gif",
+            step_skip=10,
+        )
 
     print(f"\nFigures are in {OUTPUT_DIR}.")
 

@@ -11,7 +11,9 @@ from vision_state_estimation.dataset import load_dataloaders
 from vision_state_estimation.train import (
     plot_error_against_angle,
     plot_loss_curves,
+    plot_predictions,
     run_experiment,
+    save_prediction_gif,
 )
 
 DEFAULT_DATA_DIR = Path("data") / "pendulum_images"
@@ -26,6 +28,7 @@ def main():
     parser.add_argument("--batch-size", type=int, default=32)
     parser.add_argument("--data-dir", type=Path, default=DEFAULT_DATA_DIR)
     parser.add_argument("--output-dir", type=Path, default=OUTPUT_DIR)
+    parser.add_argument("--gif", action="store_true", help="also write an animation")
     args = parser.parse_args()
 
     args.output_dir.mkdir(parents=True, exist_ok=True)
@@ -54,6 +57,14 @@ def main():
 
     plot_loss_curves(histories, args.output_dir / "loss_curves.pdf")
     plot_error_against_angle(models, test_loader, args.output_dir / "error_vs_angle.pdf")
+
+    if args.model == "both":
+        plot_predictions(models, test_loader, args.output_dir / "predictions.png")
+        if args.gif:
+            save_prediction_gif(
+                models, test_loader, args.output_dir / "predictions.gif"
+            )
+
     print(f"Figures are in {args.output_dir}.")
 
 
